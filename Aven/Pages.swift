@@ -2,18 +2,18 @@ import Charts
 import SwiftUI
 
 private enum EarningsRange: String, CaseIterable, Identifiable {
+    case day = "1D"
     case week = "7D"
     case month = "30D"
-    case quarter = "90D"
     case year = "1Y"
 
     var id: Self { self }
 
     var daySpan: Int {
         switch self {
+        case .day: 1
         case .week: 7
         case .month: 30
-        case .quarter: 90
         case .year: 365
         }
     }
@@ -38,7 +38,7 @@ private struct IncomeSource: Identifiable {
 
 private enum EarningsMockData {
     static let totalEarnings = 42_680.24
-    static let referenceDate = Calendar.current.startOfDay(for: .now)
+    static let referenceDate = Date.now
 
     static let sources = [
         IncomeSource(
@@ -73,6 +73,10 @@ private enum EarningsMockData {
 
     static func earnings(for range: EarningsRange) -> [EarningsPoint] {
         let values: [Double] = switch range {
+        case .day:
+            [41_920, 41_920, 41_980, 41_980, 42_080, 42_080, 42_140,
+             42_140, 42_220, 42_220, 42_310, 42_310, 42_360, 42_360,
+             42_440, 42_440, 42_520, 42_520, 42_610, totalEarnings]
         case .week:
             [38_920, 39_040, 39_040, 39_780, 39_780, 40_110, 40_110,
              41_620, 41_620, 42_080, 42_080, totalEarnings]
@@ -81,10 +85,6 @@ private enum EarningsMockData {
              34_880, 34_880, 36_020, 36_020, 36_940, 36_940, 38_640,
              38_640, 39_010, 39_010, 40_980, 40_980, 41_360, 41_360,
              totalEarnings]
-        case .quarter:
-            [20_100, 21_800, 21_800, 24_400, 24_400, 24_900, 26_800,
-             26_800, 29_600, 29_600, 32_500, 32_500, 34_200, 35_900,
-             35_900, 38_700, 38_700, 40_800, 40_800, totalEarnings]
         case .year:
             [2_400, 2_400, 4_980, 4_980, 7_600, 9_800, 9_800, 13_200,
              13_200, 16_800, 19_600, 19_600, 23_900, 23_900, 27_600,
@@ -190,18 +190,6 @@ struct DashboardView: View {
 
     private var earningsHeader: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Total earnings")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text("All sources")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.tertiary)
-            }
-
             Text(displayedEarnings.usdText)
                 .font(.system(size: 40, weight: .semibold, design: .rounded))
                 .tracking(-1.25)
@@ -209,11 +197,10 @@ struct DashboardView: View {
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText(value: displayedEarnings))
                 .animation(.snappy(duration: 0.18), value: displayedEarnings)
-                .padding(.top, 8)
 
             Group {
                 if let selectedPoint {
-                    Text(selectedPoint.date.selectedDateText)
+                    Text(selectedPoint.date.selectionText(for: selectedRange))
                         .foregroundStyle(.secondary)
                 } else {
                     HStack(spacing: 7) {
@@ -282,15 +269,15 @@ struct DashboardView: View {
 
     private var dateLabels: some View {
         HStack {
-            Text(earningsPoints.first?.date.shortDateText ?? "")
+            Text(earningsPoints.first?.date.axisText(for: selectedRange) ?? "")
 
             Spacer()
 
-            Text(earningsPoints.middlePoint?.date.shortDateText ?? "")
+            Text(earningsPoints.middlePoint?.date.axisText(for: selectedRange) ?? "")
 
             Spacer()
 
-            Text(earningsPoints.last?.date.shortDateText ?? "")
+            Text(earningsPoints.last?.date.axisText(for: selectedRange) ?? "")
         }
         .font(.caption2)
         .foregroundStyle(.tertiary)
@@ -336,7 +323,7 @@ private struct EarningsCurveLayer: View {
                     yStart: .value("Baseline", chartDomain.lowerBound),
                     yEnd: .value("Earnings", point.value)
                 )
-                .interpolationMethod(.stepEnd)
+                .interpolationMethod(.monotone)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
@@ -354,7 +341,7 @@ private struct EarningsCurveLayer: View {
                 x: .value("Date", point.date),
                 y: .value("Earnings", point.value)
             )
-            .interpolationMethod(.stepEnd)
+            .interpolationMethod(.monotone)
             .lineStyle(
                 StrokeStyle(
                     lineWidth: lineWidth,
@@ -385,6 +372,7 @@ private struct EarningsCurveInteractionLayer: View {
     let points: [EarningsPoint]
     let chartDomain: ClosedRange<Double>
     @Binding var selectedPoint: EarningsPoint?
+    @State private var hapticStep = 0
 
     var body: some View {
         Chart(points) { point in
@@ -442,6 +430,7 @@ private struct EarningsCurveInteractionLayer: View {
                 }
             }
         }
+        .sensoryFeedback(.selection, trigger: hapticStep)
     }
 
     private var chartDateDomain: ClosedRange<Date> {
@@ -454,9 +443,14 @@ private struct EarningsCurveInteractionLayer: View {
         let clampedX = min(max(xPosition, 0), plotWidth)
         guard let date: Date = proxy.value(atX: clampedX) else { return }
 
-        selectedPoint = points.min { lhs, rhs in
+        guard let nextPoint = points.min(by: { lhs, rhs in
             abs(lhs.date.timeIntervalSince(date)) < abs(rhs.date.timeIntervalSince(date))
-        }
+        }) else { return }
+
+        guard nextPoint.id != selectedPoint?.id else { return }
+
+        selectedPoint = nextPoint
+        hapticStep += 1
     }
 
     @ViewBuilder
@@ -632,7 +626,21 @@ private extension Date {
         formatted(.dateTime.month(.abbreviated).day())
     }
 
-    var selectedDateText: String {
-        formatted(.dateTime.month(.wide).day().year())
+    func axisText(for range: EarningsRange) -> String {
+        switch range {
+        case .day:
+            formatted(.dateTime.hour().minute())
+        case .week, .month, .year:
+            shortDateText
+        }
+    }
+
+    func selectionText(for range: EarningsRange) -> String {
+        switch range {
+        case .day:
+            formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        case .week, .month, .year:
+            formatted(.dateTime.month(.wide).day().year())
+        }
     }
 }
