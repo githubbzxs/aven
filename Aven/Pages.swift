@@ -498,14 +498,6 @@ private struct EarningsCurveInteractionLayer: View {
     }
 }
 
-struct AgentView: View {
-    var body: some View {
-        AppTheme.background
-            .ignoresSafeArea()
-            .accessibilityIdentifier("screen.agent")
-    }
-}
-
 struct SourcesView: View {
     var body: some View {
         ZStack {
@@ -589,6 +581,27 @@ struct SourcesView: View {
         }
         .padding(.vertical, 16)
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct SettingsView: View {
+    var body: some View {
+        ZStack {
+            AppTheme.background
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Settings")
+                    .font(.largeTitle.weight(.semibold))
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 30)
+            .padding(.bottom, 120)
+        }
+        .accessibilityIdentifier("screen.settings")
     }
 }
 

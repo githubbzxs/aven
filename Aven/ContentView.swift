@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum AppTab: String {
-    case dashboard = "Dashboard"
-    case agent = "Agent"
     case sources = "Sources"
+    case dashboard = "Dashboard"
+    case settings = "Settings"
 }
 
 enum AppTheme {
@@ -15,6 +15,13 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            Tab(value: AppTab.sources) {
+                SourcesView()
+            } label: {
+                Image(systemName: "square.3.layers.3d")
+                    .accessibilityLabel(AppTab.sources.rawValue)
+            }
+
             Tab(value: AppTab.dashboard) {
                 DashboardView()
             } label: {
@@ -22,41 +29,17 @@ struct ContentView: View {
                     .accessibilityLabel(AppTab.dashboard.rawValue)
             }
 
-            Tab(value: AppTab.agent) {
-                AgentView()
+            Tab(value: AppTab.settings) {
+                SettingsView()
             } label: {
-                Image("AgentTabIcon")
-                    .accessibilityLabel(AppTab.agent.rawValue)
-            }
-
-            Tab(value: AppTab.sources) {
-                SourcesView()
-            } label: {
-                Image(systemName: "square.3.layers.3d")
-                    .accessibilityLabel(AppTab.sources.rawValue)
+                Image(systemName: "gearshape")
+                    .accessibilityLabel(AppTab.settings.rawValue)
             }
         }
         .tabViewStyle(.tabBarOnly)
         .tabBarMinimizeBehavior(.never)
         .tint(.accentColor)
         .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: selectedTab)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            HStack {
-                Image("Avatar")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
-                    .padding(4)
-                    .glassEffect(.regular, in: .circle)
-                    .accessibilityHidden(true)
-
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-        }
         .background(AppTheme.background.ignoresSafeArea())
     }
 }
