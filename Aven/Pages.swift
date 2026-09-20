@@ -100,10 +100,10 @@ private enum EarningsMockData {
     ]
 
     private static let sourceProfiles = [
-        SourceSignalProfile(phase: 0.4, shortCycleMinutes: 47, rangeCycles: 9, amplitude: 0.0060),
-        SourceSignalProfile(phase: 1.7, shortCycleMinutes: 113, rangeCycles: 4, amplitude: 0.0025),
-        SourceSignalProfile(phase: 2.8, shortCycleMinutes: 79, rangeCycles: 6, amplitude: 0.0035),
-        SourceSignalProfile(phase: 4.2, shortCycleMinutes: 157, rangeCycles: 11, amplitude: 0.0050)
+        SourceSignalProfile(phase: 0.4, shortCycleMinutes: 240, rangeCycles: 1.4, amplitude: 0.0012),
+        SourceSignalProfile(phase: 1.7, shortCycleMinutes: 360, rangeCycles: 0.9, amplitude: 0.0007),
+        SourceSignalProfile(phase: 2.8, shortCycleMinutes: 300, rangeCycles: 1.8, amplitude: 0.0010),
+        SourceSignalProfile(phase: 4.2, shortCycleMinutes: 480, rangeCycles: 1.2, amplitude: 0.0009)
     ]
 
     private static let dayAnchors = [
@@ -161,7 +161,7 @@ private enum EarningsMockData {
             let share = source.earnings / totalEarnings
             let shortWave = sin(2 * .pi * minute / profile.shortCycleMinutes + profile.phase)
             let rangeWave = sin(2 * .pi * progress * profile.rangeCycles + profile.phase * 0.6)
-            let modulation = envelope * profile.amplitude * (shortWave * 0.42 + rangeWave * 0.58)
+            let modulation = envelope * profile.amplitude * (shortWave * 0.25 + rangeWave * 0.75)
             return result + baseline * share * (1 + modulation)
         }
 
