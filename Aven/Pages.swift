@@ -350,7 +350,18 @@ struct DashboardView: View {
             )
             .mask(alignment: .leading) {
                 GeometryReader { geometry in
-                    Rectangle()
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.04), location: 0),
+                            .init(color: .white.opacity(0.55), location: 0.055),
+                            .init(color: .white, location: 0.115),
+                            .init(color: .white, location: 0.885),
+                            .init(color: .white.opacity(0.55), location: 0.945),
+                            .init(color: .white.opacity(0.04), location: 1)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
                         .frame(width: geometry.size.width * revealProgress)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
