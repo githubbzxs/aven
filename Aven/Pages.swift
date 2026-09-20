@@ -95,7 +95,7 @@ private enum EarningsMockData {
              32_800, 34_200, 38_600, 43_900, 47_100, 45_900, 44_100,
              43_500, totalEarnings]
         }
-        let values = smoothedValues(from: anchors)
+        let values = densifiedValues(from: anchors)
 
         let interval = TimeInterval(range.daySpan * 24 * 60 * 60)
 
@@ -106,23 +106,10 @@ private enum EarningsMockData {
         }
     }
 
-    private static func smoothedValues(from anchors: [Double]) -> [Double] {
+    private static func densifiedValues(from anchors: [Double]) -> [Double] {
         guard anchors.count > 1 else { return anchors }
 
-        let segmentSlopes = zip(anchors, anchors.dropFirst()).map { $1 - $0 }
-        var tangents = Array(repeating: 0.0, count: anchors.count)
-        tangents[0] = segmentSlopes[0]
-        tangents[anchors.count - 1] = segmentSlopes[segmentSlopes.count - 1]
-
-        for index in 1..<(anchors.count - 1) {
-            let previousSlope = segmentSlopes[index - 1]
-            let nextSlope = segmentSlopes[index]
-
-            guard previousSlope * nextSlope > 0 else { continue }
-            tangents[index] = 2 * previousSlope * nextSlope / (previousSlope + nextSlope)
-        }
-
-        let samplesPerSegment = 6
+        let samplesPerSegment = 3
         var values: [Double] = []
         values.reserveCapacity((anchors.count - 1) * samplesPerSegment + 1)
 
@@ -132,18 +119,7 @@ private enum EarningsMockData {
 
             for step in 0..<samplesPerSegment {
                 let progress = Double(step) / Double(samplesPerSegment)
-                let progressSquared = progress * progress
-                let progressCubed = progressSquared * progress
-                let startWeight = 2 * progressCubed - 3 * progressSquared + 1
-                let startTangentWeight = progressCubed - 2 * progressSquared + progress
-                let endWeight = -2 * progressCubed + 3 * progressSquared
-                let endTangentWeight = progressCubed - progressSquared
-                let smoothedValue = startWeight * start
-                    + startTangentWeight * tangents[index]
-                    + endWeight * end
-                    + endTangentWeight * tangents[index + 1]
-
-                values.append(min(max(smoothedValue, min(start, end)), max(start, end)))
+                values.append(start + (end - start) * progress)
             }
         }
 
@@ -377,7 +353,7 @@ private struct EarningsCurveLayer: View {
                     yStart: .value("Baseline", chartDomain.lowerBound),
                     yEnd: .value("Earnings", point.value)
                 )
-                .interpolationMethod(.linear)
+                .interpolationMethod(.monotone)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
@@ -395,7 +371,7 @@ private struct EarningsCurveLayer: View {
                 x: .value("Date", point.date),
                 y: .value("Earnings", point.value)
             )
-            .interpolationMethod(.linear)
+            .interpolationMethod(.monotone)
             .lineStyle(
                 StrokeStyle(
                     lineWidth: lineWidth,
