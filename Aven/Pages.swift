@@ -399,10 +399,10 @@ struct DashboardView: View {
             displayedPoint = nil
             revealProgress = 0
 
-            try? await Task.sleep(for: .milliseconds(90))
+            try? await Task.sleep(for: .milliseconds(70))
             guard !Task.isCancelled else { return }
 
-            withAnimation(.timingCurve(0.16, 0.78, 0.22, 1, duration: 1.25)) {
+            withAnimation(.timingCurve(0.20, 0.76, 0.22, 1, duration: 1.10)) {
                 revealProgress = 1
             }
         }
@@ -449,11 +449,11 @@ struct DashboardView: View {
                 EarningsCurveLayer(
                     points: chartPoints,
                     chartDomain: chartDomain,
-                    lineOpacity: 0.18,
-                    areaTopOpacity: 0.045
+                    lineOpacity: 0.035,
+                    areaTopOpacity: 0
                 )
                 .mask {
-                    CurveProgressMask(progress: revealProgress)
+                    CurveRevealMask(progress: revealProgress)
                 }
 
                 EarningsCurveLayer(
@@ -463,7 +463,10 @@ struct DashboardView: View {
                     areaTopOpacity: 0.27
                 )
                 .mask {
-                    CurveProgressMask(progress: min(revealProgress, highlightedProgress))
+                    CurveSelectionMask(progress: highlightedProgress)
+                }
+                .mask {
+                    CurveRevealMask(progress: revealProgress)
                 }
             }
             .compositingGroup()
@@ -530,19 +533,36 @@ struct DashboardView: View {
     }
 }
 
-private struct CurveProgressMask: View {
+private struct CurveRevealMask: View {
     let progress: Double
 
     var body: some View {
         GeometryReader { geometry in
             let revealedWidth = geometry.size.width * min(max(progress, 0), 1)
-            let fadeWidth = min(max(geometry.size.width - revealedWidth, 0), 26)
 
-            if revealedWidth > 0 {
+            Rectangle()
+                .fill(.white)
+                .frame(width: revealedWidth)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct CurveSelectionMask: View {
+    let progress: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            let selectedWidth = geometry.size.width * min(max(progress, 0), 1)
+            let fadeWidth = min(max(geometry.size.width - selectedWidth, 0), 26)
+
+            if selectedWidth >= geometry.size.width {
+                Color.white
+            } else if selectedWidth > 0 {
                 HStack(spacing: 0) {
                     Rectangle()
                         .fill(.white)
-                        .frame(width: revealedWidth)
+                        .frame(width: selectedWidth)
 
                     LinearGradient(
                         colors: [.white, .clear],
@@ -596,7 +616,8 @@ private struct EarningsCurveLayer: View {
                 LinearGradient(
                     stops: [
                         .init(color: Color.accentColor.opacity(areaTopOpacity), location: 0),
-                        .init(color: Color.accentColor.opacity(areaTopOpacity * 0.43), location: 0.46),
+                        .init(color: Color.accentColor.opacity(areaTopOpacity * 0.38), location: 0.36),
+                        .init(color: Color.accentColor.opacity(0), location: 0.72),
                         .init(color: Color.accentColor.opacity(0), location: 1)
                     ],
                     startPoint: .top,
