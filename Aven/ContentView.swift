@@ -19,15 +19,17 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             Tab(value: AppTab.dashboard) {
                 DashboardView()
+                    .toolbarVisibility(.hidden, for: .tabBar)
             }
             Tab(value: AppTab.agent) {
                 AgentView()
+                    .toolbarVisibility(.hidden, for: .tabBar)
             }
             Tab(value: AppTab.sources) {
                 SourcesView()
+                    .toolbarVisibility(.hidden, for: .tabBar)
             }
         }
-        .toolbarVisibility(.hidden, for: .tabBar)
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack {
                 Spacer()
@@ -87,7 +89,7 @@ private struct BottomBar: View {
     private func tabIcon(for tab: AppTab) -> some View {
         switch tab {
         case .dashboard:
-            Image(systemName: "chart.xyaxis.line")
+            Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 25, weight: .semibold))
         case .agent:
             Circle()
