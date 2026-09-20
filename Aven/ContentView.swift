@@ -26,6 +26,7 @@ struct ContentView: View {
                 AgentView()
             } label: {
                 Image(systemName: "circle")
+                    .symbolVariant(.none)
                     .accessibilityLabel(AppTab.agent.rawValue)
             }
 
@@ -46,6 +47,8 @@ struct ContentView: View {
                     .scaledToFill()
                     .frame(width: 44, height: 44)
                     .clipShape(Circle())
+                    .padding(4)
+                    .glassEffect(.regular, in: .circle)
                     .accessibilityHidden(true)
 
                 Spacer()
