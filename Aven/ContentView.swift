@@ -25,8 +25,7 @@ struct ContentView: View {
             Tab(value: AppTab.agent) {
                 AgentView()
             } label: {
-                Image(systemName: "circle")
-                    .symbolVariant(.none)
+                Image("AgentTabIcon")
                     .accessibilityLabel(AppTab.agent.rawValue)
             }
 
