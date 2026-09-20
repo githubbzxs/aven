@@ -72,25 +72,28 @@ private enum EarningsMockData {
     ]
 
     static func earnings(for range: EarningsRange) -> [EarningsPoint] {
-        let values: [Double] = switch range {
+        let anchors: [Double] = switch range {
         case .day:
-            [41_920, 41_920, 41_980, 41_980, 42_080, 42_080, 42_140,
-             42_140, 42_220, 42_220, 42_310, 42_310, 42_360, 42_360,
-             42_440, 42_440, 42_520, 42_520, 42_610, totalEarnings]
+            [41_980, 42_042, 42_018, 42_106, 42_172, 42_128, 42_220,
+             42_296, 42_244, 42_338, 42_406, 42_358, 42_452, 42_528,
+             42_466, 42_562, 42_634, 42_588, 42_674, 42_718, 42_652,
+             totalEarnings]
         case .week:
-            [38_920, 39_040, 39_040, 39_780, 39_780, 40_110, 40_110,
-             41_620, 41_620, 42_080, 42_080, totalEarnings]
+            [38_920, 39_220, 39_040, 39_580, 39_940, 39_710, 40_280,
+             40_660, 40_320, 41_040, 41_420, 41_110, 41_760, 42_140,
+             41_820, 42_480, 42_210, 42_840, 42_520, totalEarnings]
         case .month:
-            [31_220, 31_220, 31_940, 31_940, 33_260, 33_260, 33_420,
-             34_880, 34_880, 36_020, 36_020, 36_940, 36_940, 38_640,
-             38_640, 39_010, 39_010, 40_980, 40_980, 41_360, 41_360,
-             totalEarnings]
+            [31_220, 31_980, 31_620, 32_640, 33_520, 33_010, 34_280,
+             35_060, 34_520, 35_780, 36_640, 35_980, 37_360, 38_420,
+             37_640, 39_180, 40_220, 39_460, 40_980, 41_840, 41_180,
+             42_420, 43_120, 42_380, totalEarnings]
         case .year:
-            [2_400, 2_400, 4_980, 4_980, 7_600, 9_800, 9_800, 13_200,
-             13_200, 16_800, 19_600, 19_600, 23_900, 23_900, 27_600,
-             31_200, 31_200, 34_900, 34_900, 38_800, 40_100, 40_100,
-             totalEarnings]
+            [2_400, 4_200, 6_800, 5_900, 9_800, 13_200, 11_700, 16_600,
+             20_100, 18_200, 23_100, 26_800, 24_600, 30_100, 33_800,
+             30_900, 35_600, 38_900, 36_100, 40_200, 42_100, 39_700,
+             43_500, 41_300, totalEarnings]
         }
+        let values = densifiedValues(from: anchors)
 
         let interval = TimeInterval(range.daySpan * 24 * 60 * 60)
 
@@ -99,6 +102,27 @@ private enum EarningsMockData {
             let date = referenceDate.addingTimeInterval(-interval * (1 - progress))
             return EarningsPoint(date: date, value: value)
         }
+    }
+
+    private static func densifiedValues(from anchors: [Double]) -> [Double] {
+        guard anchors.count > 1 else { return anchors }
+
+        let samplesPerSegment = 3
+        var values: [Double] = []
+        values.reserveCapacity((anchors.count - 1) * samplesPerSegment + 1)
+
+        for index in anchors.indices.dropLast() {
+            let start = anchors[index]
+            let end = anchors[index + 1]
+
+            for step in 0..<samplesPerSegment {
+                let progress = Double(step) / Double(samplesPerSegment)
+                values.append(start + (end - start) * progress)
+            }
+        }
+
+        values.append(anchors[anchors.count - 1])
+        return values
     }
 }
 
@@ -156,6 +180,15 @@ struct DashboardView: View {
         return min(max(selectedPoint.date.timeIntervalSince(firstDate) / fullInterval, 0), 1)
     }
 
+    private var dateLabelPoints: [EarningsPoint] {
+        guard !earningsPoints.isEmpty else { return [] }
+
+        let lastIndex = earningsPoints.count - 1
+        return [0.0, 0.25, 0.5, 0.75, 1.0].map { progress in
+            earningsPoints[Int((Double(lastIndex) * progress).rounded())]
+        }
+    }
+
     var body: some View {
         ZStack {
             AppTheme.background
@@ -198,19 +231,12 @@ struct DashboardView: View {
                 .contentTransition(.numericText(value: displayedEarnings))
                 .animation(.snappy(duration: 0.18), value: displayedEarnings)
 
-            Group {
-                if let selectedPoint {
-                    Text(selectedPoint.date.selectionText(for: selectedRange))
-                        .foregroundStyle(.secondary)
-                } else {
-                    HStack(spacing: 7) {
-                        Text(periodGain.signedUSDText)
-                            .foregroundStyle(Color.accentColor)
+            HStack(spacing: 7) {
+                Text(periodGain.signedUSDText)
+                    .foregroundStyle(Color.accentColor)
 
-                        Text("\(periodChange.percentText) · \(selectedRange.rawValue)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                Text("\(periodChange.percentText) · \(selectedRange.rawValue)")
+                    .foregroundStyle(.secondary)
             }
             .font(.subheadline.weight(.semibold))
             .monospacedDigit()
@@ -223,8 +249,8 @@ struct DashboardView: View {
             EarningsCurveLayer(
                 points: earningsPoints,
                 chartDomain: chartDomain,
-                lineWidth: 2,
-                lineOpacity: selectedPoint == nil ? 0 : 0.14,
+                lineWidth: 2.2,
+                lineOpacity: selectedPoint == nil ? 0 : 0.10,
                 areaTopOpacity: 0
             )
 
@@ -232,18 +258,18 @@ struct DashboardView: View {
                 EarningsCurveLayer(
                     points: earningsPoints,
                     chartDomain: chartDomain,
-                    lineWidth: 9,
-                    lineOpacity: 0.20,
+                    lineWidth: 10,
+                    lineOpacity: 0.26,
                     areaTopOpacity: 0
                 )
-                .blur(radius: 7)
+                .blur(radius: 8)
 
                 EarningsCurveLayer(
                     points: earningsPoints,
                     chartDomain: chartDomain,
-                    lineWidth: 2.6,
+                    lineWidth: 2.4,
                     lineOpacity: 1,
-                    areaTopOpacity: 0.22
+                    areaTopOpacity: 0.09
                 )
             }
             .mask(alignment: .leading) {
@@ -257,6 +283,7 @@ struct DashboardView: View {
             EarningsCurveInteractionLayer(
                 points: earningsPoints,
                 chartDomain: chartDomain,
+                range: selectedRange,
                 selectedPoint: $selectedPoint
             )
         }
@@ -268,16 +295,14 @@ struct DashboardView: View {
     }
 
     private var dateLabels: some View {
-        HStack {
-            Text(earningsPoints.first?.date.axisText(for: selectedRange) ?? "")
-
-            Spacer()
-
-            Text(earningsPoints.middlePoint?.date.axisText(for: selectedRange) ?? "")
-
-            Spacer()
-
-            Text(earningsPoints.last?.date.axisText(for: selectedRange) ?? "")
+        HStack(spacing: 0) {
+            ForEach(Array(dateLabelPoints.enumerated()), id: \.element.id) { index, point in
+                Text(point.date.axisText(for: selectedRange))
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: index == 0 ? .leading : index == dateLabelPoints.count - 1 ? .trailing : .center
+                    )
+            }
         }
         .font(.caption2)
         .foregroundStyle(.tertiary)
@@ -292,12 +317,12 @@ struct DashboardView: View {
                 } label: {
                     Text(range.rawValue)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(selectedRange == range ? Color.accentColor : .secondary)
+                        .foregroundStyle(selectedRange == range ? Color.primary : .secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                         .background(
-                            selectedRange == range ? Color.accentColor.opacity(0.14) : .clear,
-                            in: Capsule()
+                            selectedRange == range ? Color.white.opacity(0.09) : .clear,
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                         )
                 }
                 .buttonStyle(.plain)
@@ -323,12 +348,12 @@ private struct EarningsCurveLayer: View {
                     yStart: .value("Baseline", chartDomain.lowerBound),
                     yEnd: .value("Earnings", point.value)
                 )
-                .interpolationMethod(.monotone)
+                .interpolationMethod(.catmullRom)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
                             Color.accentColor.opacity(areaTopOpacity),
-                            Color.accentColor.opacity(0.045),
+                            Color.accentColor.opacity(areaTopOpacity * 0.22),
                             Color.accentColor.opacity(0)
                         ],
                         startPoint: .top,
@@ -341,7 +366,7 @@ private struct EarningsCurveLayer: View {
                 x: .value("Date", point.date),
                 y: .value("Earnings", point.value)
             )
-            .interpolationMethod(.monotone)
+            .interpolationMethod(.catmullRom)
             .lineStyle(
                 StrokeStyle(
                     lineWidth: lineWidth,
@@ -371,8 +396,10 @@ private struct EarningsCurveLayer: View {
 private struct EarningsCurveInteractionLayer: View {
     let points: [EarningsPoint]
     let chartDomain: ClosedRange<Double>
+    let range: EarningsRange
     @Binding var selectedPoint: EarningsPoint?
     @State private var hapticStep = 0
+    @State private var lastHapticCell: Int?
 
     var body: some View {
         Chart(points) { point in
@@ -408,6 +435,8 @@ private struct EarningsCurveInteractionLayer: View {
                                         )
                                     }
                                     .onEnded { _ in
+                                        lastHapticCell = nil
+
                                         withAnimation(.easeOut(duration: 0.24)) {
                                             selectedPoint = nil
                                         }
@@ -430,7 +459,7 @@ private struct EarningsCurveInteractionLayer: View {
                 }
             }
         }
-        .sensoryFeedback(.selection, trigger: hapticStep)
+        .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: hapticStep)
     }
 
     private var chartDateDomain: ClosedRange<Date> {
@@ -441,6 +470,13 @@ private struct EarningsCurveInteractionLayer: View {
 
     private func updateSelection(at xPosition: CGFloat, plotWidth: CGFloat, proxy: ChartProxy) {
         let clampedX = min(max(xPosition, 0), plotWidth)
+        let hapticCell = Int(clampedX / 5)
+
+        if hapticCell != lastHapticCell {
+            lastHapticCell = hapticCell
+            hapticStep += 1
+        }
+
         guard let date: Date = proxy.value(atX: clampedX) else { return }
 
         guard let nextPoint = points.min(by: { lhs, rhs in
@@ -468,10 +504,13 @@ private struct EarningsCurveInteractionLayer: View {
             path.move(to: CGPoint(x: pointX, y: guideTop))
             path.addLine(to: CGPoint(x: pointX, y: guideBottom))
         }
-        .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
+        .stroke(
+            Color.white.opacity(0.28),
+            style: StrokeStyle(lineWidth: 0.8, lineCap: .round, dash: [2, 3])
+        )
 
-        Text(date.shortDateText)
-            .font(.caption2.weight(.medium))
+        Text(date.crosshairText(for: range))
+            .font(.caption2.weight(.semibold))
             .foregroundStyle(.secondary)
             .position(x: labelX, y: plotRect.minY + 8)
 
@@ -484,10 +523,7 @@ private struct EarningsCurveInteractionLayer: View {
         Circle()
             .fill(.white)
             .frame(width: 6, height: 6)
-            .overlay {
-                Circle()
-                    .stroke(Color.accentColor, lineWidth: 2)
-            }
+            .shadow(color: Color.accentColor.opacity(0.9), radius: 3)
             .position(x: pointX, y: pointY)
     }
 }
@@ -599,13 +635,6 @@ struct SettingsView: View {
     }
 }
 
-private extension Array where Element == EarningsPoint {
-    var middlePoint: EarningsPoint? {
-        guard !isEmpty else { return nil }
-        return self[count / 2]
-    }
-}
-
 private extension Double {
     var usdText: String {
         "$" + formatted(.number.precision(.fractionLength(2)))
@@ -635,12 +664,12 @@ private extension Date {
         }
     }
 
-    func selectionText(for range: EarningsRange) -> String {
+    func crosshairText(for range: EarningsRange) -> String {
         switch range {
         case .day:
-            formatted(.dateTime.month(.abbreviated).day().hour().minute())
+            formatted(.dateTime.hour().minute())
         case .week, .month, .year:
-            formatted(.dateTime.month(.wide).day().year())
+            shortDateText
         }
     }
 }
