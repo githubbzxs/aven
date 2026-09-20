@@ -95,36 +95,13 @@ private enum EarningsMockData {
              32_800, 34_200, 38_600, 43_900, 47_100, 45_900, 44_100,
              43_500, totalEarnings]
         }
-        let values = densifiedValues(from: anchors)
-
         let interval = TimeInterval(range.daySpan * 24 * 60 * 60)
 
-        return values.enumerated().map { index, value in
-            let progress = Double(index) / Double(values.count - 1)
+        return anchors.enumerated().map { index, value in
+            let progress = Double(index) / Double(anchors.count - 1)
             let date = referenceDate.addingTimeInterval(-interval * (1 - progress))
             return EarningsPoint(date: date, value: value)
         }
-    }
-
-    private static func densifiedValues(from anchors: [Double]) -> [Double] {
-        guard anchors.count > 1 else { return anchors }
-
-        let samplesPerSegment = 3
-        var values: [Double] = []
-        values.reserveCapacity((anchors.count - 1) * samplesPerSegment + 1)
-
-        for index in anchors.indices.dropLast() {
-            let start = anchors[index]
-            let end = anchors[index + 1]
-
-            for step in 0..<samplesPerSegment {
-                let progress = Double(step) / Double(samplesPerSegment)
-                values.append(start + (end - start) * progress)
-            }
-        }
-
-        values.append(anchors[anchors.count - 1])
-        return values
     }
 }
 
