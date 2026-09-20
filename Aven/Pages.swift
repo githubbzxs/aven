@@ -307,10 +307,12 @@ private enum EarningsMockData {
 }
 
 struct DashboardView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedRange: EarningsRange = .month
     @State private var selectedPoint: EarningsPoint?
     @State private var displayedPoint: EarningsPoint?
     @State private var revealProgress = 0.0
+    @State private var revealCycle = 0
 
     private var earningsSeries: EarningsSeries {
         EarningsMockData.series(for: selectedRange)
@@ -346,6 +348,25 @@ struct DashboardView: View {
         return lowerBound...(upperValue + spread * 0.10)
     }
 
+    private var highlightedProgress: Double {
+        guard
+            let selectedPoint,
+            let firstDate = chartPoints.first?.date,
+            let lastDate = chartPoints.last?.date
+        else {
+            return 1
+        }
+
+        let fullInterval = lastDate.timeIntervalSince(firstDate)
+        guard fullInterval > 0 else { return 1 }
+
+        return min(max(selectedPoint.date.timeIntervalSince(firstDate) / fullInterval, 0), 1)
+    }
+
+    private var revealTaskID: String {
+        "\(selectedRange.rawValue)-\(revealCycle)"
+    }
+
     private var dateLabelPoints: [EarningsPoint] {
         return [0.0, 0.25, 0.5, 0.75, 1.0].map { progress in
             EarningsMockData.point(
@@ -373,17 +394,24 @@ struct DashboardView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .task(id: selectedRange) {
+        .task(id: revealTaskID) {
             selectedPoint = nil
             displayedPoint = nil
             revealProgress = 0
 
-            try? await Task.sleep(for: .milliseconds(70))
+            try? await Task.sleep(for: .milliseconds(90))
             guard !Task.isCancelled else { return }
 
-            withAnimation(.easeOut(duration: 1.05)) {
+            withAnimation(.timingCurve(0.16, 0.78, 0.22, 1, duration: 1.25)) {
                 revealProgress = 1
             }
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            guard oldPhase != .active, newPhase == .active else { return }
+            selectedPoint = nil
+            displayedPoint = nil
+            revealProgress = 0
+            revealCycle += 1
         }
         .accessibilityIdentifier("screen.dashboard")
     }
@@ -417,27 +445,30 @@ struct DashboardView: View {
 
     private var earningsChart: some View {
         ZStack {
-            EarningsCurveLayer(
-                points: chartPoints,
-                chartDomain: chartDomain
-            )
-            .mask(alignment: .leading) {
-                GeometryReader { geometry in
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(0.04), location: 0),
-                            .init(color: .white.opacity(0.55), location: 0.055),
-                            .init(color: .white, location: 0.115),
-                            .init(color: .white, location: 0.885),
-                            .init(color: .white.opacity(0.55), location: 0.945),
-                            .init(color: .white.opacity(0.04), location: 1)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                        .frame(width: geometry.size.width * revealProgress)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            ZStack {
+                EarningsCurveLayer(
+                    points: chartPoints,
+                    chartDomain: chartDomain,
+                    lineOpacity: 0.18,
+                    areaTopOpacity: 0.045
+                )
+                .mask {
+                    CurveProgressMask(progress: revealProgress)
                 }
+
+                EarningsCurveLayer(
+                    points: chartPoints,
+                    chartDomain: chartDomain,
+                    lineOpacity: 0.96,
+                    areaTopOpacity: 0.27
+                )
+                .mask {
+                    CurveProgressMask(progress: min(revealProgress, highlightedProgress))
+                }
+            }
+            .compositingGroup()
+            .mask {
+                CurveEdgeFadeMask()
             }
 
             EarningsCurveInteractionLayer(
@@ -475,6 +506,10 @@ struct DashboardView: View {
         HStack(spacing: 8) {
             ForEach(EarningsRange.allCases) { range in
                 Button {
+                    guard range != selectedRange else { return }
+                    selectedPoint = nil
+                    displayedPoint = nil
+                    revealProgress = 0
                     selectedRange = range
                 } label: {
                     Text(range.rawValue)
@@ -495,9 +530,59 @@ struct DashboardView: View {
     }
 }
 
+private struct CurveProgressMask: View {
+    let progress: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            let revealedWidth = geometry.size.width * min(max(progress, 0), 1)
+            let fadeWidth = min(max(geometry.size.width - revealedWidth, 0), 26)
+
+            if revealedWidth > 0 {
+                HStack(spacing: 0) {
+                    Rectangle()
+                        .fill(.white)
+                        .frame(width: revealedWidth)
+
+                    LinearGradient(
+                        colors: [.white, .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: fadeWidth)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else {
+                Color.clear
+            }
+        }
+    }
+}
+
+private struct CurveEdgeFadeMask: View {
+    var body: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .clear, location: 0.03),
+                .init(color: .white.opacity(0.42), location: 0.10),
+                .init(color: .white, location: 0.17),
+                .init(color: .white, location: 0.83),
+                .init(color: .white.opacity(0.42), location: 0.90),
+                .init(color: .clear, location: 0.97),
+                .init(color: .clear, location: 1)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+}
+
 private struct EarningsCurveLayer: View {
     let points: [EarningsPoint]
     let chartDomain: ClosedRange<Double>
+    let lineOpacity: Double
+    let areaTopOpacity: Double
 
     var body: some View {
         Chart(points) { point in
@@ -510,8 +595,8 @@ private struct EarningsCurveLayer: View {
             .foregroundStyle(
                 LinearGradient(
                     stops: [
-                        .init(color: Color.accentColor.opacity(0.30), location: 0),
-                        .init(color: Color.accentColor.opacity(0.13), location: 0.46),
+                        .init(color: Color.accentColor.opacity(areaTopOpacity), location: 0),
+                        .init(color: Color.accentColor.opacity(areaTopOpacity * 0.43), location: 0.46),
                         .init(color: Color.accentColor.opacity(0), location: 1)
                     ],
                     startPoint: .top,
@@ -531,7 +616,7 @@ private struct EarningsCurveLayer: View {
                     lineJoin: .round
                 )
             )
-            .foregroundStyle(Color.accentColor)
+            .foregroundStyle(Color.accentColor.opacity(lineOpacity))
         }
         .chartXScale(domain: chartDateDomain)
         .chartYScale(domain: chartDomain)
