@@ -39,7 +39,7 @@ struct ContentView: View {
         .tabViewStyle(.tabBarOnly)
         .tabBarMinimizeBehavior(.never)
         .tint(.accentColor)
-        .sensoryFeedback(.selection, trigger: selectedTab)
+        .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: selectedTab)
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack {
                 Image("Avatar")
