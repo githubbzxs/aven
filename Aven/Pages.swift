@@ -74,27 +74,28 @@ private enum EarningsMockData {
     static func earnings(for range: EarningsRange) -> [EarningsPoint] {
         let anchors: [Double] = switch range {
         case .day:
-            [42_040, 42_080, 42_210, 42_170, 42_360, 42_610, 42_540,
-             42_820, 43_070, 43_260, 43_190, 42_980, 42_690, 42_430,
-             42_370, 42_540, 42_760, 42_890, 42_830, 42_940, 42_860,
-             42_790, totalEarnings]
+            [42_420, 42_300, 42_080, 41_940, 42_020, 42_180, 42_430,
+             42_710, 42_930, 42_850, 42_760, 42_820, 42_980, 43_160,
+             43_340, 43_420, 43_390, 43_220, 43_000, 42_880, 42_810,
+             42_740, totalEarnings]
         case .week:
-            [39_180, 39_260, 39_840, 40_620, 40_310, 41_180, 42_460,
-             42_070, 43_240, 44_610, 45_180, 44_820, 43_960, 42_520,
-             41_610, 41_280, 41_940, 42_880, 43_620, 43_410, 43_020,
-             totalEarnings]
+            [40_820, 41_200, 42_300, 43_800, 45_100, 45_420, 44_700,
+             43_100, 41_600, 40_700, 40_300, 40_900, 41_800, 42_600,
+             42_200, 41_700, 42_100, 43_000, 43_680, 43_400, 43_050,
+             42_900, 42_760, totalEarnings]
         case .month:
-            [31_820, 31_960, 32_740, 33_980, 33_620, 35_140, 36_920,
-             36_410, 38_760, 40_940, 40_280, 42_860, 44_720, 44_190,
-             45_680, 47_120, 46_740, 45_560, 43_620, 41_480, 40_720,
-             41_260, 42_780, 44_060, 43_740, 43_210, totalEarnings]
+            [34_600, 35_100, 36_800, 38_600, 39_400, 39_100, 40_200,
+             42_500, 45_100, 47_400, 48_200, 47_600, 45_900, 43_200,
+             39_800, 36_500, 34_200, 33_100, 34_000, 35_800, 38_100,
+             40_700, 43_200, 44_600, 43_900, 43_100, totalEarnings]
         case .year:
-            [7_600, 8_180, 10_920, 14_600, 13_240, 17_880, 22_760,
-             21_040, 26_880, 31_420, 29_760, 35_940, 41_680, 39_820,
-             44_960, 49_840, 52_360, 50_920, 46_180, 40_640, 35_280,
-             33_920, 37_460, 42_780, 46_120, 45_480, 44_260, totalEarnings]
+            [11_800, 14_600, 19_500, 26_900, 34_800, 39_600, 37_200,
+             31_500, 26_200, 23_800, 25_400, 29_700, 34_600, 40_800,
+             46_900, 52_300, 55_800, 54_600, 50_200, 43_700, 36_900,
+             32_800, 34_200, 38_600, 43_900, 47_100, 45_900, 44_100,
+             43_500, totalEarnings]
         }
-        let values = densifiedValues(from: anchors)
+        let values = smoothedValues(from: anchors)
 
         let interval = TimeInterval(range.daySpan * 24 * 60 * 60)
 
@@ -105,10 +106,23 @@ private enum EarningsMockData {
         }
     }
 
-    private static func densifiedValues(from anchors: [Double]) -> [Double] {
+    private static func smoothedValues(from anchors: [Double]) -> [Double] {
         guard anchors.count > 1 else { return anchors }
 
-        let samplesPerSegment = 3
+        let segmentSlopes = zip(anchors, anchors.dropFirst()).map { $1 - $0 }
+        var tangents = Array(repeating: 0.0, count: anchors.count)
+        tangents[0] = segmentSlopes[0]
+        tangents[anchors.count - 1] = segmentSlopes[segmentSlopes.count - 1]
+
+        for index in 1..<(anchors.count - 1) {
+            let previousSlope = segmentSlopes[index - 1]
+            let nextSlope = segmentSlopes[index]
+
+            guard previousSlope * nextSlope > 0 else { continue }
+            tangents[index] = 2 * previousSlope * nextSlope / (previousSlope + nextSlope)
+        }
+
+        let samplesPerSegment = 6
         var values: [Double] = []
         values.reserveCapacity((anchors.count - 1) * samplesPerSegment + 1)
 
@@ -118,7 +132,18 @@ private enum EarningsMockData {
 
             for step in 0..<samplesPerSegment {
                 let progress = Double(step) / Double(samplesPerSegment)
-                values.append(start + (end - start) * progress)
+                let progressSquared = progress * progress
+                let progressCubed = progressSquared * progress
+                let startWeight = 2 * progressCubed - 3 * progressSquared + 1
+                let startTangentWeight = progressCubed - 2 * progressSquared + progress
+                let endWeight = -2 * progressCubed + 3 * progressSquared
+                let endTangentWeight = progressCubed - progressSquared
+                let smoothedValue = startWeight * start
+                    + startTangentWeight * tangents[index]
+                    + endWeight * end
+                    + endTangentWeight * tangents[index + 1]
+
+                values.append(min(max(smoothedValue, min(start, end)), max(start, end)))
             }
         }
 
@@ -321,11 +346,11 @@ struct DashboardView: View {
                 } label: {
                     Text(range.rawValue)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(selectedRange == range ? Color.primary : .secondary)
+                        .foregroundStyle(selectedRange == range ? Color.accentColor : .secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                         .background(
-                            selectedRange == range ? Color.white.opacity(0.09) : .clear,
+                            selectedRange == range ? Color.accentColor.opacity(0.15) : .clear,
                             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                         )
                 }
@@ -352,7 +377,7 @@ private struct EarningsCurveLayer: View {
                     yStart: .value("Baseline", chartDomain.lowerBound),
                     yEnd: .value("Earnings", point.value)
                 )
-                .interpolationMethod(.catmullRom)
+                .interpolationMethod(.linear)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
@@ -370,7 +395,7 @@ private struct EarningsCurveLayer: View {
                 x: .value("Date", point.date),
                 y: .value("Earnings", point.value)
             )
-            .interpolationMethod(.catmullRom)
+            .interpolationMethod(.linear)
             .lineStyle(
                 StrokeStyle(
                     lineWidth: lineWidth,
