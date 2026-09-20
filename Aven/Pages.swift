@@ -313,6 +313,7 @@ struct DashboardView: View {
     @State private var displayedPoint: EarningsPoint?
     @State private var revealProgress = 0.0
     @State private var revealCycle = 0
+    @State private var shouldRevealAfterBackground = false
 
     private var earningsSeries: EarningsSeries {
         EarningsMockData.series(for: selectedRange)
@@ -395,23 +396,23 @@ struct DashboardView: View {
             .scrollIndicators(.hidden)
         }
         .task(id: revealTaskID) {
-            selectedPoint = nil
-            displayedPoint = nil
-            revealProgress = 0
+            await Task.yield()
+            guard !Task.isCancelled, revealProgress < 1 else { return }
 
-            try? await Task.sleep(for: .milliseconds(70))
-            guard !Task.isCancelled else { return }
-
-            withAnimation(.timingCurve(0.20, 0.76, 0.22, 1, duration: 1.10)) {
+            withAnimation(.timingCurve(0.30, 0.55, 0.34, 1, duration: 1.45)) {
                 revealProgress = 1
             }
         }
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-            guard oldPhase != .active, newPhase == .active else { return }
-            selectedPoint = nil
-            displayedPoint = nil
-            revealProgress = 0
-            revealCycle += 1
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background {
+                selectedPoint = nil
+                displayedPoint = nil
+                revealProgress = 0
+                shouldRevealAfterBackground = true
+            } else if newPhase == .active, shouldRevealAfterBackground {
+                shouldRevealAfterBackground = false
+                revealCycle += 1
+            }
         }
         .accessibilityIdentifier("screen.dashboard")
     }
