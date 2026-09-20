@@ -486,7 +486,6 @@ private struct EarningsCurveInteractionLayer: View {
         guard nextPoint.id != selectedPoint?.id else { return }
 
         selectedPoint = nextPoint
-        hapticStep += 1
     }
 
     @ViewBuilder
