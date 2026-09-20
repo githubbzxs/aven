@@ -74,24 +74,25 @@ private enum EarningsMockData {
     static func earnings(for range: EarningsRange) -> [EarningsPoint] {
         let anchors: [Double] = switch range {
         case .day:
-            [41_980, 42_042, 42_018, 42_106, 42_172, 42_128, 42_220,
-             42_296, 42_244, 42_338, 42_406, 42_358, 42_452, 42_528,
-             42_466, 42_562, 42_634, 42_588, 42_674, 42_718, 42_652,
-             totalEarnings]
+            [42_040, 42_080, 42_210, 42_170, 42_360, 42_610, 42_540,
+             42_820, 43_070, 43_260, 43_190, 42_980, 42_690, 42_430,
+             42_370, 42_540, 42_760, 42_890, 42_830, 42_940, 42_860,
+             42_790, totalEarnings]
         case .week:
-            [38_920, 39_220, 39_040, 39_580, 39_940, 39_710, 40_280,
-             40_660, 40_320, 41_040, 41_420, 41_110, 41_760, 42_140,
-             41_820, 42_480, 42_210, 42_840, 42_520, totalEarnings]
+            [39_180, 39_260, 39_840, 40_620, 40_310, 41_180, 42_460,
+             42_070, 43_240, 44_610, 45_180, 44_820, 43_960, 42_520,
+             41_610, 41_280, 41_940, 42_880, 43_620, 43_410, 43_020,
+             totalEarnings]
         case .month:
-            [31_220, 31_980, 31_620, 32_640, 33_520, 33_010, 34_280,
-             35_060, 34_520, 35_780, 36_640, 35_980, 37_360, 38_420,
-             37_640, 39_180, 40_220, 39_460, 40_980, 41_840, 41_180,
-             42_420, 43_120, 42_380, totalEarnings]
+            [31_820, 31_960, 32_740, 33_980, 33_620, 35_140, 36_920,
+             36_410, 38_760, 40_940, 40_280, 42_860, 44_720, 44_190,
+             45_680, 47_120, 46_740, 45_560, 43_620, 41_480, 40_720,
+             41_260, 42_780, 44_060, 43_740, 43_210, totalEarnings]
         case .year:
-            [2_400, 4_200, 6_800, 5_900, 9_800, 13_200, 11_700, 16_600,
-             20_100, 18_200, 23_100, 26_800, 24_600, 30_100, 33_800,
-             30_900, 35_600, 38_900, 36_100, 40_200, 42_100, 39_700,
-             43_500, 41_300, totalEarnings]
+            [7_600, 8_180, 10_920, 14_600, 13_240, 17_880, 22_760,
+             21_040, 26_880, 31_420, 29_760, 35_940, 41_680, 39_820,
+             44_960, 49_840, 52_360, 50_920, 46_180, 40_640, 35_280,
+             33_920, 37_460, 42_780, 46_120, 45_480, 44_260, totalEarnings]
         }
         let values = densifiedValues(from: anchors)
 
@@ -129,6 +130,7 @@ private enum EarningsMockData {
 struct DashboardView: View {
     @State private var selectedRange: EarningsRange = .month
     @State private var selectedPoint: EarningsPoint?
+    @State private var displayedPoint: EarningsPoint?
     @State private var revealProgress = 0.0
 
     private var earningsPoints: [EarningsPoint] {
@@ -136,7 +138,7 @@ struct DashboardView: View {
     }
 
     private var displayedEarnings: Double {
-        selectedPoint?.value ?? EarningsMockData.totalEarnings
+        displayedPoint?.value ?? EarningsMockData.totalEarnings
     }
 
     private var periodGain: Double {
@@ -209,6 +211,7 @@ struct DashboardView: View {
         }
         .task(id: selectedRange) {
             selectedPoint = nil
+            displayedPoint = nil
             revealProgress = 0
 
             try? await Task.sleep(for: .milliseconds(70))
@@ -229,7 +232,7 @@ struct DashboardView: View {
                 .monospacedDigit()
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText(value: displayedEarnings))
-                .animation(.snappy(duration: 0.18), value: displayedEarnings)
+                .animation(.easeOut(duration: 0.30), value: displayedEarnings)
 
             HStack(spacing: 7) {
                 Text(periodGain.signedUSDText)
@@ -284,7 +287,8 @@ struct DashboardView: View {
                 points: earningsPoints,
                 chartDomain: chartDomain,
                 range: selectedRange,
-                selectedPoint: $selectedPoint
+                selectedPoint: $selectedPoint,
+                displayedPoint: $displayedPoint
             )
         }
         .frame(height: 252)
@@ -398,8 +402,10 @@ private struct EarningsCurveInteractionLayer: View {
     let chartDomain: ClosedRange<Double>
     let range: EarningsRange
     @Binding var selectedPoint: EarningsPoint?
+    @Binding var displayedPoint: EarningsPoint?
     @State private var hapticStep = 0
     @State private var lastHapticCell: Int?
+    @State private var lastDisplayedCell: Int?
 
     var body: some View {
         Chart(points) { point in
@@ -436,9 +442,11 @@ private struct EarningsCurveInteractionLayer: View {
                                     }
                                     .onEnded { _ in
                                         lastHapticCell = nil
+                                        lastDisplayedCell = nil
 
                                         withAnimation(.easeOut(duration: 0.24)) {
                                             selectedPoint = nil
+                                            displayedPoint = nil
                                         }
                                     }
                             )
@@ -482,6 +490,12 @@ private struct EarningsCurveInteractionLayer: View {
         guard let nextPoint = points.min(by: { lhs, rhs in
             abs(lhs.date.timeIntervalSince(date)) < abs(rhs.date.timeIntervalSince(date))
         }) else { return }
+
+        let displayedCell = Int(clampedX / 20)
+        if displayedCell != lastDisplayedCell {
+            lastDisplayedCell = displayedCell
+            displayedPoint = nextPoint
+        }
 
         guard nextPoint.id != selectedPoint?.id else { return }
 
