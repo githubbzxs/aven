@@ -2,7 +2,7 @@ import Charts
 import SwiftUI
 
 private enum EarningsRange: String, CaseIterable, Identifiable {
-    case day = "1D"
+    case day = "24H"
     case week = "7D"
     case month = "30D"
     case year = "1Y"
@@ -17,6 +17,19 @@ private enum EarningsRange: String, CaseIterable, Identifiable {
         case .year: 365
         }
     }
+
+    var minuteCount: Int {
+        daySpan * 24 * 60
+    }
+
+    var chartBucketMinutes: Int {
+        switch self {
+        case .day: 10
+        case .week: 60
+        case .month: 4 * 60
+        case .year: 2 * 24 * 60
+        }
+    }
 }
 
 private struct EarningsPoint: Identifiable {
@@ -24,6 +37,14 @@ private struct EarningsPoint: Identifiable {
     let value: Double
 
     var id: Date { date }
+}
+
+private struct EarningsSeries {
+    let minuteCount: Int
+    let chartPoints: [EarningsPoint]
+    let valueDomain: ClosedRange<Double>
+    let firstPoint: EarningsPoint
+    let lastPoint: EarningsPoint
 }
 
 private struct IncomeSource: Identifiable {
@@ -34,6 +55,13 @@ private struct IncomeSource: Identifiable {
     let share: String
 
     var id: String { name }
+}
+
+private struct SourceSignalProfile {
+    let phase: Double
+    let shortCycleMinutes: Double
+    let rangeCycles: Double
+    let amplitude: Double
 }
 
 private enum EarningsMockData {
@@ -71,37 +99,137 @@ private enum EarningsMockData {
         )
     ]
 
-    static func earnings(for range: EarningsRange) -> [EarningsPoint] {
-        let anchors: [Double] = switch range {
-        case .day:
-            [42_420, 42_300, 42_080, 41_940, 42_020, 42_180, 42_430,
-             42_710, 42_930, 42_850, 42_760, 42_820, 42_980, 43_160,
-             43_340, 43_420, 43_390, 43_220, 43_000, 42_880, 42_810,
-             42_740, totalEarnings]
-        case .week:
-            [40_820, 41_200, 42_300, 43_800, 45_100, 45_420, 44_700,
-             43_100, 41_600, 40_700, 40_300, 40_900, 41_800, 42_600,
-             42_200, 41_700, 42_100, 43_000, 43_680, 43_400, 43_050,
-             42_900, 42_760, totalEarnings]
-        case .month:
-            [34_600, 35_100, 36_800, 38_600, 39_400, 39_100, 40_200,
-             42_500, 45_100, 47_400, 48_200, 47_600, 45_900, 43_200,
-             39_800, 36_500, 34_200, 33_100, 34_000, 35_800, 38_100,
-             40_700, 43_200, 44_600, 43_900, 43_100, totalEarnings]
-        case .year:
-            [11_800, 14_600, 19_500, 26_900, 34_800, 39_600, 37_200,
-             31_500, 26_200, 23_800, 25_400, 29_700, 34_600, 40_800,
-             46_900, 52_300, 55_800, 54_600, 50_200, 43_700, 36_900,
-             32_800, 34_200, 38_600, 43_900, 47_100, 45_900, 44_100,
-             43_500, totalEarnings]
-        }
-        let interval = TimeInterval(range.daySpan * 24 * 60 * 60)
+    private static let sourceProfiles = [
+        SourceSignalProfile(phase: 0.4, shortCycleMinutes: 47, rangeCycles: 9, amplitude: 0.0060),
+        SourceSignalProfile(phase: 1.7, shortCycleMinutes: 113, rangeCycles: 4, amplitude: 0.0025),
+        SourceSignalProfile(phase: 2.8, shortCycleMinutes: 79, rangeCycles: 6, amplitude: 0.0035),
+        SourceSignalProfile(phase: 4.2, shortCycleMinutes: 157, rangeCycles: 11, amplitude: 0.0050)
+    ]
 
-        return anchors.enumerated().map { index, value in
-            let progress = Double(index) / Double(anchors.count - 1)
-            let date = referenceDate.addingTimeInterval(-interval * (1 - progress))
-            return EarningsPoint(date: date, value: value)
+    private static let dayAnchors = [
+        42_420.0, 42_300, 42_080, 41_940, 42_020, 42_180, 42_430,
+        42_710, 42_930, 42_850, 42_760, 42_820, 42_980, 43_160,
+        43_340, 43_420, 43_390, 43_220, 43_000, 42_880, 42_810,
+        42_740, totalEarnings
+    ]
+
+    private static let weekAnchors = [
+        40_820.0, 41_200, 42_300, 43_800, 45_100, 45_420, 44_700,
+        43_100, 41_600, 40_700, 40_300, 40_900, 41_800, 42_600,
+        42_200, 41_700, 42_100, 43_000, 43_680, 43_400, 43_050,
+        42_900, 42_760, totalEarnings
+    ]
+
+    private static let monthAnchors = [
+        34_600.0, 35_100, 36_800, 38_600, 39_400, 39_100, 40_200,
+        42_500, 45_100, 47_400, 48_200, 47_600, 45_900, 43_200,
+        39_800, 36_500, 34_200, 33_100, 34_000, 35_800, 38_100,
+        40_700, 43_200, 44_600, 43_900, 43_100, totalEarnings
+    ]
+
+    private static let yearAnchors = [
+        11_800.0, 14_600, 19_500, 26_900, 34_800, 39_600, 37_200,
+        31_500, 26_200, 23_800, 25_400, 29_700, 34_600, 40_800,
+        46_900, 52_300, 55_800, 54_600, 50_200, 43_700, 36_900,
+        32_800, 34_200, 38_600, 43_900, 47_100, 45_900, 44_100,
+        43_500, totalEarnings
+    ]
+
+    private static let daySeries = makeSeries(for: .day)
+    private static let weekSeries = makeSeries(for: .week)
+    private static let monthSeries = makeSeries(for: .month)
+    private static let yearSeries = makeSeries(for: .year)
+
+    static func series(for range: EarningsRange) -> EarningsSeries {
+        switch range {
+        case .day: daySeries
+        case .week: weekSeries
+        case .month: monthSeries
+        case .year: yearSeries
         }
+    }
+
+    static func point(for range: EarningsRange, minuteIndex: Int) -> EarningsPoint {
+        let clampedIndex = min(max(minuteIndex, 0), range.minuteCount)
+        let progress = Double(clampedIndex) / Double(range.minuteCount)
+        let baseline = trendValue(for: range, progress: progress)
+        let envelope = sin(.pi * progress)
+        let minute = Double(clampedIndex)
+
+        let value = zip(sources, sourceProfiles).reduce(0.0) { result, pair in
+            let (source, profile) = pair
+            let share = source.earnings / totalEarnings
+            let shortWave = sin(2 * .pi * minute / profile.shortCycleMinutes + profile.phase)
+            let rangeWave = sin(2 * .pi * progress * profile.rangeCycles + profile.phase * 0.6)
+            let modulation = envelope * profile.amplitude * (shortWave * 0.42 + rangeWave * 0.58)
+            return result + baseline * share * (1 + modulation)
+        }
+
+        let date = referenceDate.addingTimeInterval(TimeInterval(clampedIndex - range.minuteCount) * 60)
+        return EarningsPoint(date: date, value: clampedIndex == range.minuteCount ? totalEarnings : value)
+    }
+
+    private static func anchors(for range: EarningsRange) -> [Double] {
+        switch range {
+        case .day: dayAnchors
+        case .week: weekAnchors
+        case .month: monthAnchors
+        case .year: yearAnchors
+        }
+    }
+
+    private static func trendValue(for range: EarningsRange, progress: Double) -> Double {
+        let values = anchors(for: range)
+        let position = progress * Double(values.count - 1)
+        let lowerIndex = min(Int(position), values.count - 1)
+        let upperIndex = min(lowerIndex + 1, values.count - 1)
+        let segmentProgress = position - Double(lowerIndex)
+        return values[lowerIndex] + (values[upperIndex] - values[lowerIndex]) * segmentProgress
+    }
+
+    private static func makeSeries(for range: EarningsRange) -> EarningsSeries {
+        let firstPoint = point(for: range, minuteIndex: 0)
+        let lastPoint = point(for: range, minuteIndex: range.minuteCount)
+        var chartPoints = [firstPoint]
+        var minimumValue = min(firstPoint.value, lastPoint.value)
+        var maximumValue = max(firstPoint.value, lastPoint.value)
+        var bucketStart = 1
+
+        while bucketStart < range.minuteCount {
+            let bucketEnd = min(bucketStart + range.chartBucketMinutes, range.minuteCount)
+            var valueSum = 0.0
+            var sampleCount = 0
+
+            for minuteIndex in bucketStart..<bucketEnd {
+                let point = point(for: range, minuteIndex: minuteIndex)
+                valueSum += point.value
+                sampleCount += 1
+                minimumValue = min(minimumValue, point.value)
+                maximumValue = max(maximumValue, point.value)
+            }
+
+            let representativeIndex = (bucketStart + bucketEnd - 1) / 2
+            let representativeDate = referenceDate.addingTimeInterval(
+                TimeInterval(representativeIndex - range.minuteCount) * 60
+            )
+            chartPoints.append(
+                EarningsPoint(
+                    date: representativeDate,
+                    value: valueSum / Double(sampleCount)
+                )
+            )
+            bucketStart = bucketEnd
+        }
+
+        chartPoints.append(lastPoint)
+
+        return EarningsSeries(
+            minuteCount: range.minuteCount,
+            chartPoints: chartPoints,
+            valueDomain: minimumValue...maximumValue,
+            firstPoint: firstPoint,
+            lastPoint: lastPoint
+        )
     }
 }
 
@@ -111,8 +239,12 @@ struct DashboardView: View {
     @State private var displayedPoint: EarningsPoint?
     @State private var revealProgress = 0.0
 
-    private var earningsPoints: [EarningsPoint] {
-        EarningsMockData.earnings(for: selectedRange)
+    private var earningsSeries: EarningsSeries {
+        EarningsMockData.series(for: selectedRange)
+    }
+
+    private var chartPoints: [EarningsPoint] {
+        earningsSeries.chartPoints
     }
 
     private var displayedEarnings: Double {
@@ -120,25 +252,21 @@ struct DashboardView: View {
     }
 
     private var periodGain: Double {
-        guard let first = earningsPoints.first, let last = earningsPoints.last else {
-            return 0
-        }
-
-        return last.value - first.value
+        earningsSeries.lastPoint.value - earningsSeries.firstPoint.value
     }
 
     private var periodChange: Double {
-        guard let first = earningsPoints.first, first.value > 0 else {
+        let firstValue = earningsSeries.firstPoint.value
+        guard firstValue > 0 else {
             return 0
         }
 
-        return periodGain / first.value * 100
+        return periodGain / firstValue * 100
     }
 
     private var chartDomain: ClosedRange<Double> {
-        let values = earningsPoints.map(\.value)
-        let lowerValue = values.min() ?? 0
-        let upperValue = values.max() ?? 1
+        let lowerValue = earningsSeries.valueDomain.lowerBound
+        let upperValue = earningsSeries.valueDomain.upperBound
         let spread = Swift.max(upperValue - lowerValue, 1)
         let lowerBound = Swift.max(0, lowerValue - spread * 0.12)
 
@@ -148,8 +276,8 @@ struct DashboardView: View {
     private var highlightedProgress: Double {
         guard
             let selectedPoint,
-            let firstDate = earningsPoints.first?.date,
-            let lastDate = earningsPoints.last?.date
+            let firstDate = chartPoints.first?.date,
+            let lastDate = chartPoints.last?.date
         else {
             return revealProgress
         }
@@ -161,11 +289,11 @@ struct DashboardView: View {
     }
 
     private var dateLabelPoints: [EarningsPoint] {
-        guard !earningsPoints.isEmpty else { return [] }
-
-        let lastIndex = earningsPoints.count - 1
         return [0.0, 0.25, 0.5, 0.75, 1.0].map { progress in
-            earningsPoints[Int((Double(lastIndex) * progress).rounded())]
+            EarningsMockData.point(
+                for: selectedRange,
+                minuteIndex: Int((Double(earningsSeries.minuteCount) * progress).rounded())
+            )
         }
     }
 
@@ -228,7 +356,7 @@ struct DashboardView: View {
     private var earningsChart: some View {
         ZStack {
             EarningsCurveLayer(
-                points: earningsPoints,
+                points: chartPoints,
                 chartDomain: chartDomain,
                 lineWidth: 2.2,
                 lineOpacity: selectedPoint == nil ? 0 : 0.10,
@@ -237,7 +365,7 @@ struct DashboardView: View {
 
             ZStack {
                 EarningsCurveLayer(
-                    points: earningsPoints,
+                    points: chartPoints,
                     chartDomain: chartDomain,
                     lineWidth: 10,
                     lineOpacity: 0.26,
@@ -246,7 +374,7 @@ struct DashboardView: View {
                 .blur(radius: 8)
 
                 EarningsCurveLayer(
-                    points: earningsPoints,
+                    points: chartPoints,
                     chartDomain: chartDomain,
                     lineWidth: 2.4,
                     lineOpacity: 1,
@@ -262,9 +390,10 @@ struct DashboardView: View {
             }
 
             EarningsCurveInteractionLayer(
-                points: earningsPoints,
+                chartPoints: chartPoints,
                 chartDomain: chartDomain,
                 range: selectedRange,
+                minuteCount: earningsSeries.minuteCount,
                 selectedPoint: $selectedPoint,
                 displayedPoint: $displayedPoint
             )
@@ -376,9 +505,10 @@ private struct EarningsCurveLayer: View {
 }
 
 private struct EarningsCurveInteractionLayer: View {
-    let points: [EarningsPoint]
+    let chartPoints: [EarningsPoint]
     let chartDomain: ClosedRange<Double>
     let range: EarningsRange
+    let minuteCount: Int
     @Binding var selectedPoint: EarningsPoint?
     @Binding var displayedPoint: EarningsPoint?
     @State private var hapticStep = 0
@@ -386,7 +516,7 @@ private struct EarningsCurveInteractionLayer: View {
     @State private var lastDisplayedCell: Int?
 
     var body: some View {
-        Chart(points) { point in
+        Chart(chartPoints) { point in
             LineMark(
                 x: .value("Date", point.date),
                 y: .value("Earnings", point.value)
@@ -414,8 +544,7 @@ private struct EarningsCurveInteractionLayer: View {
                                     .onChanged { gesture in
                                         updateSelection(
                                             at: gesture.location.x - plotRect.minX,
-                                            plotWidth: plotRect.width,
-                                            proxy: proxy
+                                            plotWidth: plotRect.width
                                         )
                                     }
                                     .onEnded { _ in
@@ -449,27 +578,34 @@ private struct EarningsCurveInteractionLayer: View {
     }
 
     private var chartDateDomain: ClosedRange<Date> {
-        let start = points.first?.date ?? .now
-        let end = points.last?.date ?? start.addingTimeInterval(1)
+        let start = chartPoints.first?.date ?? .now
+        let end = chartPoints.last?.date ?? start.addingTimeInterval(1)
         return start...end
     }
 
-    private func updateSelection(at xPosition: CGFloat, plotWidth: CGFloat, proxy: ChartProxy) {
+    private func updateSelection(at xPosition: CGFloat, plotWidth: CGFloat) {
+        guard plotWidth > 0, minuteCount > 0 else { return }
+
         let clampedX = min(max(xPosition, 0), plotWidth)
-        let hapticCell = Int(clampedX / 5)
+        let progress = Double(clampedX / plotWidth)
+        let minuteIndex = Int((progress * Double(minuteCount)).rounded())
+        let nextPoint = EarningsMockData.point(for: range, minuteIndex: minuteIndex)
+        let hapticCell = interactionCell(
+            for: minuteIndex,
+            plotWidth: plotWidth,
+            cellWidth: 5
+        )
 
         if hapticCell != lastHapticCell {
             lastHapticCell = hapticCell
             hapticStep += 1
         }
 
-        guard let date: Date = proxy.value(atX: clampedX) else { return }
-
-        guard let nextPoint = points.min(by: { lhs, rhs in
-            abs(lhs.date.timeIntervalSince(date)) < abs(rhs.date.timeIntervalSince(date))
-        }) else { return }
-
-        let displayedCell = Int(clampedX / 20)
+        let displayedCell = interactionCell(
+            for: minuteIndex,
+            plotWidth: plotWidth,
+            cellWidth: 20
+        )
         if displayedCell != lastDisplayedCell {
             lastDisplayedCell = displayedCell
             displayedPoint = nextPoint
@@ -478,6 +614,15 @@ private struct EarningsCurveInteractionLayer: View {
         guard nextPoint.id != selectedPoint?.id else { return }
 
         selectedPoint = nextPoint
+    }
+
+    private func interactionCell(
+        for minuteIndex: Int,
+        plotWidth: CGFloat,
+        cellWidth: CGFloat
+    ) -> Int {
+        let cellCount = max(Int(plotWidth / cellWidth), 1)
+        return Int(Double(minuteIndex) / Double(minuteCount) * Double(cellCount))
     }
 
     @ViewBuilder
