@@ -273,21 +273,6 @@ struct DashboardView: View {
         return lowerBound...(upperValue + spread * 0.10)
     }
 
-    private var highlightedProgress: Double {
-        guard
-            let selectedPoint,
-            let firstDate = chartPoints.first?.date,
-            let lastDate = chartPoints.last?.date
-        else {
-            return revealProgress
-        }
-
-        let fullInterval = lastDate.timeIntervalSince(firstDate)
-        guard fullInterval > 0 else { return 1 }
-
-        return min(max(selectedPoint.date.timeIntervalSince(firstDate) / fullInterval, 0), 1)
-    }
-
     private var dateLabelPoints: [EarningsPoint] {
         return [0.0, 0.25, 0.5, 0.75, 1.0].map { progress in
             EarningsMockData.point(
@@ -361,34 +346,12 @@ struct DashboardView: View {
         ZStack {
             EarningsCurveLayer(
                 points: chartPoints,
-                chartDomain: chartDomain,
-                lineWidth: 2.2,
-                lineOpacity: selectedPoint == nil ? 0 : 0.10,
-                areaTopOpacity: 0
+                chartDomain: chartDomain
             )
-
-            ZStack {
-                EarningsCurveLayer(
-                    points: chartPoints,
-                    chartDomain: chartDomain,
-                    lineWidth: 10,
-                    lineOpacity: 0.26,
-                    areaTopOpacity: 0
-                )
-                .blur(radius: 8)
-
-                EarningsCurveLayer(
-                    points: chartPoints,
-                    chartDomain: chartDomain,
-                    lineWidth: 2.4,
-                    lineOpacity: 1,
-                    areaTopOpacity: 0.09
-                )
-            }
             .mask(alignment: .leading) {
                 GeometryReader { geometry in
                     Rectangle()
-                        .frame(width: geometry.size.width * highlightedProgress)
+                        .frame(width: geometry.size.width * revealProgress)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -451,31 +414,26 @@ struct DashboardView: View {
 private struct EarningsCurveLayer: View {
     let points: [EarningsPoint]
     let chartDomain: ClosedRange<Double>
-    let lineWidth: CGFloat
-    let lineOpacity: Double
-    let areaTopOpacity: Double
 
     var body: some View {
         Chart(points) { point in
-            if areaTopOpacity > 0 {
-                AreaMark(
-                    x: .value("Date", point.date),
-                    yStart: .value("Baseline", chartDomain.lowerBound),
-                    yEnd: .value("Earnings", point.value)
+            AreaMark(
+                x: .value("Date", point.date),
+                yStart: .value("Baseline", chartDomain.lowerBound),
+                yEnd: .value("Earnings", point.value)
+            )
+            .interpolationMethod(.monotone)
+            .foregroundStyle(
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.accentColor.opacity(0.30), location: 0),
+                        .init(color: Color.accentColor.opacity(0.13), location: 0.46),
+                        .init(color: Color.accentColor.opacity(0), location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-                .interpolationMethod(.monotone)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            Color.accentColor.opacity(areaTopOpacity),
-                            Color.accentColor.opacity(areaTopOpacity * 0.22),
-                            Color.accentColor.opacity(0)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
+            )
 
             LineMark(
                 x: .value("Date", point.date),
@@ -484,12 +442,12 @@ private struct EarningsCurveLayer: View {
             .interpolationMethod(.monotone)
             .lineStyle(
                 StrokeStyle(
-                    lineWidth: lineWidth,
+                    lineWidth: 2.5,
                     lineCap: .round,
                     lineJoin: .round
                 )
             )
-            .foregroundStyle(Color.accentColor.opacity(lineOpacity))
+            .foregroundStyle(Color.accentColor)
         }
         .chartXScale(domain: chartDateDomain)
         .chartYScale(domain: chartDomain)
