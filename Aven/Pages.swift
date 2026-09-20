@@ -252,7 +252,7 @@ struct DashboardView: View {
     }
 
     private var periodGain: Double {
-        earningsSeries.lastPoint.value - earningsSeries.firstPoint.value
+        displayedEarnings - earningsSeries.firstPoint.value
     }
 
     private var periodChange: Double {
@@ -343,9 +343,13 @@ struct DashboardView: View {
             HStack(spacing: 7) {
                 Text(periodGain.signedUSDText)
                     .foregroundStyle(Color.accentColor)
+                    .contentTransition(.numericText(value: periodGain))
+                    .animation(.easeOut(duration: 0.30), value: periodGain)
 
                 Text("\(periodChange.percentText) · \(selectedRange.rawValue)")
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText(value: periodChange))
+                    .animation(.easeOut(duration: 0.30), value: periodChange)
             }
             .font(.subheadline.weight(.semibold))
             .monospacedDigit()
