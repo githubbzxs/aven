@@ -64,6 +64,79 @@ private struct SourceSignalProfile {
     let amplitude: Double
 }
 
+private struct MonotoneTrend {
+    let values: [Double]
+    private let tangents: [Double]
+
+    init(values: [Double]) {
+        self.values = values
+
+        guard values.count > 1 else {
+            tangents = Array(repeating: 0, count: values.count)
+            return
+        }
+
+        let secants = values.indices.dropLast().map { index in
+            values[index + 1] - values[index]
+        }
+        var slopes = Array(repeating: 0.0, count: values.count)
+        slopes[0] = secants[0]
+        slopes[values.count - 1] = secants[secants.count - 1]
+
+        if values.count > 2 {
+            for index in 1..<(values.count - 1) {
+                let previous = secants[index - 1]
+                let next = secants[index]
+                slopes[index] = previous * next <= 0 ? 0 : (previous + next) / 2
+            }
+        }
+
+        for index in secants.indices {
+            let secant = secants[index]
+            guard secant != 0 else {
+                slopes[index] = 0
+                slopes[index + 1] = 0
+                continue
+            }
+
+            let lowerRatio = slopes[index] / secant
+            let upperRatio = slopes[index + 1] / secant
+            let magnitude = lowerRatio * lowerRatio + upperRatio * upperRatio
+
+            if magnitude > 9 {
+                let scale = 3 / sqrt(magnitude)
+                slopes[index] = scale * lowerRatio * secant
+                slopes[index + 1] = scale * upperRatio * secant
+            }
+        }
+
+        tangents = slopes
+    }
+
+    func value(at progress: Double) -> Double {
+        guard values.count > 1 else { return values.first ?? 0 }
+
+        let clampedProgress = min(max(progress, 0), 1)
+        guard clampedProgress < 1 else { return values[values.count - 1] }
+
+        let position = clampedProgress * Double(values.count - 1)
+        let lowerIndex = min(Int(position), values.count - 2)
+        let segmentProgress = position - Double(lowerIndex)
+        let squaredProgress = segmentProgress * segmentProgress
+        let cubedProgress = squaredProgress * segmentProgress
+
+        let lowerWeight = 2 * cubedProgress - 3 * squaredProgress + 1
+        let lowerTangentWeight = cubedProgress - 2 * squaredProgress + segmentProgress
+        let upperWeight = -2 * cubedProgress + 3 * squaredProgress
+        let upperTangentWeight = cubedProgress - squaredProgress
+
+        return lowerWeight * values[lowerIndex]
+            + lowerTangentWeight * tangents[lowerIndex]
+            + upperWeight * values[lowerIndex + 1]
+            + upperTangentWeight * tangents[lowerIndex + 1]
+    }
+}
+
 private enum EarningsMockData {
     static let totalEarnings = 42_680.24
     static let referenceDate = Date.now
@@ -135,6 +208,11 @@ private enum EarningsMockData {
         43_500, totalEarnings
     ]
 
+    private static let dayTrend = MonotoneTrend(values: dayAnchors)
+    private static let weekTrend = MonotoneTrend(values: weekAnchors)
+    private static let monthTrend = MonotoneTrend(values: monthAnchors)
+    private static let yearTrend = MonotoneTrend(values: yearAnchors)
+
     private static let daySeries = makeSeries(for: .day)
     private static let weekSeries = makeSeries(for: .week)
     private static let monthSeries = makeSeries(for: .month)
@@ -169,22 +247,17 @@ private enum EarningsMockData {
         return EarningsPoint(date: date, value: clampedIndex == range.minuteCount ? totalEarnings : value)
     }
 
-    private static func anchors(for range: EarningsRange) -> [Double] {
+    private static func trend(for range: EarningsRange) -> MonotoneTrend {
         switch range {
-        case .day: dayAnchors
-        case .week: weekAnchors
-        case .month: monthAnchors
-        case .year: yearAnchors
+        case .day: dayTrend
+        case .week: weekTrend
+        case .month: monthTrend
+        case .year: yearTrend
         }
     }
 
     private static func trendValue(for range: EarningsRange, progress: Double) -> Double {
-        let values = anchors(for: range)
-        let position = progress * Double(values.count - 1)
-        let lowerIndex = min(Int(position), values.count - 1)
-        let upperIndex = min(lowerIndex + 1, values.count - 1)
-        let segmentProgress = position - Double(lowerIndex)
-        return values[lowerIndex] + (values[upperIndex] - values[lowerIndex]) * segmentProgress
+        trend(for: range).value(at: progress)
     }
 
     private static func makeSeries(for range: EarningsRange) -> EarningsSeries {
@@ -376,8 +449,8 @@ struct DashboardView: View {
                 EarningsCurveLayer(
                     points: chartPoints,
                     chartDomain: chartDomain,
-                    lineOpacity: 0.06,
-                    areaTopOpacity: 0.010
+                    lineOpacity: 0.18,
+                    areaTopOpacity: 0.045
                 )
                 .mask {
                     CurveProgressMask(progress: revealProgress)
@@ -523,8 +596,7 @@ private struct EarningsCurveLayer: View {
                 LinearGradient(
                     stops: [
                         .init(color: Color.accentColor.opacity(areaTopOpacity), location: 0),
-                        .init(color: Color.accentColor.opacity(areaTopOpacity * 0.36), location: 0.38),
-                        .init(color: Color.accentColor.opacity(0), location: 0.76),
+                        .init(color: Color.accentColor.opacity(areaTopOpacity * 0.43), location: 0.46),
                         .init(color: Color.accentColor.opacity(0), location: 1)
                     ],
                     startPoint: .top,
