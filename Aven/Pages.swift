@@ -399,7 +399,7 @@ struct DashboardView: View {
             await Task.yield()
             guard !Task.isCancelled, revealProgress < 1 else { return }
 
-            withAnimation(.timingCurve(0.30, 0.55, 0.34, 1, duration: 1.45)) {
+            withAnimation(.timingCurve(0.24, 0.68, 0.30, 1, duration: 1.30)) {
                 revealProgress = 1
             }
         }
@@ -625,6 +625,7 @@ private struct EarningsCurveLayer: View {
                     endPoint: .bottom
                 )
             )
+            .alignsMarkStylesWithPlotArea()
 
             LineMark(
                 x: .value("Date", point.date),
