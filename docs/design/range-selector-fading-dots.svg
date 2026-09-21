@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="920" viewBox="0 0 1440 920">
+  <defs>
+    <filter id="glow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202020"/>
+      <stop offset="1" stop-color="#181818"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1440" height="920" rx="30" fill="#191918"/>
+  <text x="64" y="72" fill="#ffffff" font-size="36" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">时间范围选择器 · 小圆点 + 短暂高亮</text>
+  <text x="64" y="112" fill="#9b9ba2" font-size="21" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">取消移动动画。切换时旧项直接熄灭，新项点亮紫色；停留片刻后再渐隐回灰色。</text>
+
+  <rect x="64" y="152" width="1312" height="250" rx="28" fill="url(#card)" stroke="#ffffff" stroke-opacity=".07"/>
+  <text x="102" y="198" fill="#b66cff" font-size="20" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">最终视觉</text>
+  <text x="102" y="230" fill="#85858d" font-size="17" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">圆点缩小到约 4 pt；没有横条、没有滑动轨迹、没有弹性位移。</text>
+
+  <g transform="translate(170 285)">
+    <g>
+      <text x="100" y="0" text-anchor="middle" fill="#8f8f98" font-size="26" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">24H</text>
+      <circle cx="100" cy="34" r="4" fill="#777780"/>
+    </g>
+    <g>
+      <text x="380" y="0" text-anchor="middle" fill="#b66cff" font-size="26" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+      <circle cx="380" cy="34" r="4" fill="#b66cff" filter="url(#glow)"/>
+    </g>
+    <g>
+      <text x="660" y="0" text-anchor="middle" fill="#8f8f98" font-size="26" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">30D</text>
+      <circle cx="660" cy="34" r="4" fill="#777780"/>
+    </g>
+    <g>
+      <text x="940" y="0" text-anchor="middle" fill="#8f8f98" font-size="26" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">1Y</text>
+      <circle cx="940" cy="34" r="4" fill="#777780"/>
+    </g>
+  </g>
+
+  <text x="64" y="470" fill="#ffffff" font-size="28" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">24H → 7D 的实际反馈节奏</text>
+  <text x="64" y="505" fill="#8d8d95" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">这里没有“点移动过去”的过程，只做亮灭和渐隐。</text>
+
+  <g transform="translate(64 550)">
+    <rect width="244" height="210" rx="22" fill="#202020" stroke="#ffffff" stroke-opacity=".07"/>
+    <text x="20" y="34" fill="#9e9ea5" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">① 切换前</text>
+    <text x="66" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="176" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">7D</text>
+    <circle cx="66" cy="116" r="4" fill="#777780"/>
+    <circle cx="176" cy="116" r="4" fill="#777780"/>
+    <text x="122" y="166" text-anchor="middle" fill="#777780" font-size="14" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">静止时都保持灰色</text>
+  </g>
+
+  <g transform="translate(334 550)">
+    <rect width="244" height="210" rx="22" fill="#202020" stroke="#ffffff" stroke-opacity=".07"/>
+    <text x="20" y="34" fill="#9e9ea5" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">② 点击 7D</text>
+    <text x="66" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="176" y="92" text-anchor="middle" fill="#b66cff" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+    <circle cx="66" cy="116" r="4" fill="#777780"/>
+    <circle cx="176" cy="116" r="4" fill="#b66cff" filter="url(#glow)"/>
+    <text x="122" y="166" text-anchor="middle" fill="#a98ac8" font-size="14" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">旧项灭，新项直接亮</text>
+  </g>
+
+  <g transform="translate(604 550)">
+    <rect width="244" height="210" rx="22" fill="#202020" stroke="#ffffff" stroke-opacity=".07"/>
+    <text x="20" y="34" fill="#9e9ea5" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">③ 短暂保持</text>
+    <text x="66" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="176" y="92" text-anchor="middle" fill="#b66cff" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+    <circle cx="66" cy="116" r="4" fill="#777780"/>
+    <circle cx="176" cy="116" r="4" fill="#b66cff" filter="url(#glow)"/>
+    <text x="122" y="166" text-anchor="middle" fill="#a98ac8" font-size="14" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">紫色约保持 0.85 s</text>
+  </g>
+
+  <g transform="translate(874 550)">
+    <rect width="244" height="210" rx="22" fill="#202020" stroke="#ffffff" stroke-opacity=".07"/>
+    <text x="20" y="34" fill="#9e9ea5" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">④ 渐隐</text>
+    <text x="66" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="176" y="92" text-anchor="middle" fill="#9f7dbd" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">7D</text>
+    <circle cx="66" cy="116" r="4" fill="#777780"/>
+    <circle cx="176" cy="116" r="4" fill="#9a78b8"/>
+    <text x="122" y="166" text-anchor="middle" fill="#8d769f" font-size="14" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">约 0.42 s 淡回灰色</text>
+  </g>
+
+  <g transform="translate(1144 550)">
+    <rect width="232" height="210" rx="22" fill="#211f22" stroke="#ffffff" stroke-opacity=".07"/>
+    <text x="20" y="34" fill="#9e9ea5" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">⑤ 稳定</text>
+    <text x="62" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="170" y="92" text-anchor="middle" fill="#8f8f98" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">7D</text>
+    <circle cx="62" cy="116" r="4" fill="#777780"/>
+    <circle cx="170" cy="116" r="4" fill="#777780"/>
+    <text x="116" y="166" text-anchor="middle" fill="#777780" font-size="14" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">最终回到安静状态</text>
+  </g>
+
+  <rect x="64" y="802" width="1312" height="66" rx="20" fill="#251b2e"/>
+  <text x="96" y="843" fill="#d4b1ff" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">连续按住滑动仍可用：跨到新分段时，只把新分段点亮；不会出现任何圆点位移。</text>
+</svg>
