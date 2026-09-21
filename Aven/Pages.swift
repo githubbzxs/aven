@@ -732,12 +732,13 @@ struct DashboardView: View {
     }
 
     private func selectRange(_ range: EarningsRange) {
-        guard range != selectedRange else { return }
+        if range != selectedRange {
+            selectedPoint = nil
+            displayedPoint = nil
+            revealProgress = 0
+            selectedRange = range
+        }
 
-        selectedPoint = nil
-        displayedPoint = nil
-        revealProgress = 0
-        selectedRange = range
         rangeHighlightVisible = true
         rangeHighlightCycle += 1
         rangeHapticGenerator.impactOccurred(intensity: 0.6)
