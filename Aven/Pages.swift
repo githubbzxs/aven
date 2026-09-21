@@ -368,6 +368,28 @@ struct DashboardView: View {
         "\(selectedRange.rawValue)-\(revealCycle)"
     }
 
+    private var revealDuration: Double {
+        guard
+            chartPoints.count > 1,
+            let firstPoint = chartPoints.first,
+            let lastPoint = chartPoints.last
+        else {
+            return 1.20
+        }
+
+        let dateSpan = max(lastPoint.date.timeIntervalSince(firstPoint.date), 1)
+        let valueSpan = max(chartDomain.upperBound - chartDomain.lowerBound, 1)
+        let chartAspectRatio = 252.0 / 353.0
+
+        let pathLength = zip(chartPoints, chartPoints.dropFirst()).reduce(0.0) { length, pair in
+            let horizontalDistance = pair.1.date.timeIntervalSince(pair.0.date) / dateSpan
+            let verticalDistance = (pair.1.value - pair.0.value) / valueSpan * chartAspectRatio
+            return length + (horizontalDistance * horizontalDistance + verticalDistance * verticalDistance).squareRoot()
+        }
+
+        return min(max(1.20 + (pathLength - 1.60) * 0.72, 1.20), 1.60)
+    }
+
     private var dateLabelPoints: [EarningsPoint] {
         return [0.0, 0.25, 0.5, 0.75, 1.0].map { progress in
             EarningsMockData.point(
@@ -399,7 +421,7 @@ struct DashboardView: View {
             await Task.yield()
             guard !Task.isCancelled, revealProgress < 1 else { return }
 
-            withAnimation(.timingCurve(0.24, 0.68, 0.30, 1, duration: 1.30)) {
+            withAnimation(.timingCurve(0.24, 0.68, 0.30, 1, duration: revealDuration)) {
                 revealProgress = 1
             }
         }
@@ -451,7 +473,7 @@ struct DashboardView: View {
                     points: chartPoints,
                     chartDomain: chartDomain,
                     lineOpacity: 0.035,
-                    areaTopOpacity: 0
+                    glowOpacity: 0
                 )
                 .mask {
                     CurveRevealMask(progress: revealProgress)
@@ -461,7 +483,7 @@ struct DashboardView: View {
                     points: chartPoints,
                     chartDomain: chartDomain,
                     lineOpacity: 0.96,
-                    areaTopOpacity: 0.27
+                    glowOpacity: 0.40
                 )
                 .mask {
                     CurveSelectionMask(progress: highlightedProgress)
@@ -603,7 +625,73 @@ private struct EarningsCurveLayer: View {
     let points: [EarningsPoint]
     let chartDomain: ClosedRange<Double>
     let lineOpacity: Double
-    let areaTopOpacity: Double
+    let glowOpacity: Double
+
+    var body: some View {
+        ZStack {
+            if glowOpacity > 0 {
+                EarningsCurveFollowGlow(
+                    points: points,
+                    chartDomain: chartDomain,
+                    opacity: glowOpacity
+                )
+            }
+
+            EarningsCurveLine(
+                points: points,
+                chartDomain: chartDomain,
+                lineWidth: 2.5,
+                opacity: lineOpacity
+            )
+        }
+    }
+}
+
+private struct EarningsCurveFollowGlow: View {
+    let points: [EarningsPoint]
+    let chartDomain: ClosedRange<Double>
+    let opacity: Double
+
+    var body: some View {
+        ZStack {
+            EarningsCurveLine(
+                points: points,
+                chartDomain: chartDomain,
+                lineWidth: 44,
+                opacity: opacity * 0.22
+            )
+            .blur(radius: 18)
+            .offset(y: 11)
+
+            EarningsCurveLine(
+                points: points,
+                chartDomain: chartDomain,
+                lineWidth: 20,
+                opacity: opacity * 0.45
+            )
+            .blur(radius: 9)
+            .offset(y: 6)
+        }
+        .compositingGroup()
+        .mask {
+            EarningsCurveAreaMask(points: points, chartDomain: chartDomain)
+        }
+        .overlay {
+            EarningsCurveLine(
+                points: points,
+                chartDomain: chartDomain,
+                lineWidth: 7,
+                opacity: opacity * 0.30
+            )
+            .blur(radius: 4)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct EarningsCurveAreaMask: View {
+    let points: [EarningsPoint]
+    let chartDomain: ClosedRange<Double>
 
     var body: some View {
         Chart(points) { point in
@@ -613,20 +701,33 @@ private struct EarningsCurveLayer: View {
                 yEnd: .value("Earnings", point.value)
             )
             .interpolationMethod(.monotone)
-            .foregroundStyle(
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.accentColor.opacity(areaTopOpacity), location: 0),
-                        .init(color: Color.accentColor.opacity(areaTopOpacity * 0.38), location: 0.36),
-                        .init(color: Color.accentColor.opacity(0), location: 0.72),
-                        .init(color: Color.accentColor.opacity(0), location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .alignsMarkStylesWithPlotArea()
+            .foregroundStyle(.white)
+        }
+        .chartXScale(domain: chartDateDomain)
+        .chartYScale(domain: chartDomain)
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartPlotStyle { plotArea in
+            plotArea.background(.clear)
+        }
+        .allowsHitTesting(false)
+    }
 
+    private var chartDateDomain: ClosedRange<Date> {
+        let start = points.first?.date ?? .now
+        let end = points.last?.date ?? start.addingTimeInterval(1)
+        return start...end
+    }
+}
+
+private struct EarningsCurveLine: View {
+    let points: [EarningsPoint]
+    let chartDomain: ClosedRange<Double>
+    let lineWidth: CGFloat
+    let opacity: Double
+
+    var body: some View {
+        Chart(points) { point in
             LineMark(
                 x: .value("Date", point.date),
                 y: .value("Earnings", point.value)
@@ -634,12 +735,12 @@ private struct EarningsCurveLayer: View {
             .interpolationMethod(.monotone)
             .lineStyle(
                 StrokeStyle(
-                    lineWidth: 2.5,
+                    lineWidth: lineWidth,
                     lineCap: .round,
                     lineJoin: .round
                 )
             )
-            .foregroundStyle(Color.accentColor.opacity(lineOpacity))
+            .foregroundStyle(Color.accentColor.opacity(opacity))
         }
         .chartXScale(domain: chartDateDomain)
         .chartYScale(domain: chartDomain)
