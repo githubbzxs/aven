@@ -632,25 +632,28 @@ struct DashboardView: View {
                                     : .secondary
                             )
 
-                        Circle()
-                            .fill(
-                                selectedRange == range && rangeHighlightVisible
-                                    ? Color.accentColor
-                                    : Color.secondary.opacity(0.34)
-                            )
-                            .frame(width: 4, height: 4)
-                            .shadow(
-                                color: selectedRange == range && rangeHighlightVisible
-                                    ? Color.accentColor.opacity(0.38)
-                                    : .clear,
-                                radius: 2.5
-                            )
+                        if selectedRange == range {
+                            Circle()
+                                .fill(
+                                    rangeHighlightVisible
+                                        ? Color.accentColor
+                                        : Color.secondary.opacity(0.34)
+                                )
+                                .frame(width: 4, height: 4)
+                                .shadow(
+                                    color: rangeHighlightVisible
+                                        ? Color.accentColor.opacity(0.38)
+                                        : .clear,
+                                    radius: 2.5
+                                )
+                        } else {
+                            Color.clear
+                                .frame(width: 4, height: 4)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 34)
                     .contentShape(Rectangle())
-                    .animation(.easeOut(duration: 0.16), value: selectedRange)
-                    .animation(.easeOut(duration: 0.42), value: rangeHighlightVisible)
                     .accessibilityElement()
                     .accessibilityLabel("Show \(range.rawValue) earnings")
                     .accessibilityAddTraits(.isButton)
@@ -686,7 +689,9 @@ struct DashboardView: View {
             }
 
             guard !Task.isCancelled else { return }
-            rangeHighlightVisible = false
+            withAnimation(.easeOut(duration: 0.42)) {
+                rangeHighlightVisible = false
+            }
         }
         .onAppear {
             rangeHapticGenerator.prepare()
