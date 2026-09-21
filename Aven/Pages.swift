@@ -640,7 +640,7 @@ struct DashboardView: View {
                                     )
                                     .scaleEffect(
                                         x: rangeIndicatorStretch,
-                                        y: max(0.78, 1 - (rangeIndicatorStretch - 1) * 0.38),
+                                        y: max(0.93, 1 - (rangeIndicatorStretch - 1) * 0.18),
                                         anchor: rangeIndicatorMovesRight ? .trailing : .leading
                                     )
                             }
@@ -667,11 +667,11 @@ struct DashboardView: View {
         }
         .frame(height: 34)
         .animation(
-            .spring(response: 0.34, dampingFraction: 0.52, blendDuration: 0.04),
+            .spring(response: 0.44, dampingFraction: 0.84, blendDuration: 0.08),
             value: selectedRange
         )
         .animation(
-            .spring(response: 0.25, dampingFraction: 0.44, blendDuration: 0.02),
+            .spring(response: 0.36, dampingFraction: 0.80, blendDuration: 0.06),
             value: rangeIndicatorStretch
         )
         .sensoryFeedback(
@@ -682,7 +682,7 @@ struct DashboardView: View {
             guard rangeIndicatorStretch > 1 else { return }
 
             do {
-                try await Task.sleep(nanoseconds: 115_000_000)
+                try await Task.sleep(nanoseconds: 150_000_000)
             } catch {
                 return
             }
@@ -714,7 +714,7 @@ struct DashboardView: View {
         let distance = abs(nextIndex - currentIndex)
 
         rangeIndicatorMovesRight = nextIndex > currentIndex
-        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.24, 0.58)
+        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.17, 0.40)
         rangeSelectionCycle += 1
         selectedPoint = nil
         displayedPoint = nil
