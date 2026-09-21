@@ -64,6 +64,12 @@ private struct SourceSignalProfile {
     let amplitude: Double
 }
 
+private struct MarketTextureProfile {
+    let seed: Double
+    let amplitude: Double
+    let valueSpan: Double
+}
+
 private struct MonotoneTrend {
     let values: [Double]
     private let tangents: [Double]
@@ -180,33 +186,63 @@ private enum EarningsMockData {
     ]
 
     private static let dayAnchors = [
-        42_420.0, 42_300, 42_080, 41_940, 42_020, 42_180, 42_430,
-        42_710, 42_930, 42_850, 42_760, 42_820, 42_980, 43_160,
-        43_340, 43_420, 43_390, 43_220, 43_000, 42_880, 42_810,
-        42_740, totalEarnings
+        42_180.0, 42_110, 42_145, 42_230, 42_195, 42_260, 42_340,
+        42_410, 42_365, 42_120, 42_090, 42_130, 42_075, 42_160,
+        42_115, 42_230, 42_205, 42_355, 42_310, 42_420, 42_385,
+        42_520, 42_470, 42_610, 42_540, 42_700, 42_660, 42_920,
+        43_180, 43_050, 43_260, 43_170, 43_390, 43_520, 43_300,
+        42_980, 42_860, 43_040, 43_280, 43_460, 43_330, 43_210,
+        43_160, 43_050, 42_950, 42_720, 42_690, totalEarnings
     ]
 
     private static let weekAnchors = [
-        40_820.0, 41_200, 42_300, 43_800, 45_100, 45_420, 44_700,
-        43_100, 41_600, 40_700, 40_300, 40_900, 41_800, 42_600,
-        42_200, 41_700, 42_100, 43_000, 43_680, 43_400, 43_050,
-        42_900, 42_760, totalEarnings
+        40_940.0, 41_180, 41_720, 42_460, 43_250, 43_820, 43_540,
+        42_900, 42_240, 41_420, 40_980, 40_620, 40_480, 40_760,
+        40_590, 40_940, 41_360, 41_180, 41_720, 42_250, 42_060,
+        42_680, 42_410, 42_980, 43_560, 43_220, 43_880, 44_160,
+        43_620, 42_940, 42_380, 42_120, 42_460, 42_910, 43_240,
+        43_020, 42_860, totalEarnings
     ]
 
     private static let monthAnchors = [
-        34_600.0, 35_100, 36_800, 38_600, 39_400, 39_100, 40_200,
-        42_500, 45_100, 47_400, 48_200, 47_600, 45_900, 43_200,
-        39_800, 36_500, 34_200, 33_100, 34_000, 35_800, 38_100,
-        40_700, 43_200, 44_600, 43_900, 43_100, totalEarnings
+        35_800.0, 35_250, 35_600, 36_400, 37_200, 38_100, 37_500,
+        34_900, 34_700, 35_100, 34_650, 35_400, 35_050, 36_000,
+        35_600, 36_800, 37_300, 38_200, 39_800, 39_200, 40_600,
+        40_100, 41_400, 40_300, 39_700, 41_100, 42_600, 42_000,
+        44_900, 43_800, 45_700, 44_900, 47_300, 48_900, 46_200,
+        42_900, 42_100, 43_800, 46_700, 45_100, 44_800, 44_100,
+        43_900, 42_650, totalEarnings
     ]
 
     private static let yearAnchors = [
-        11_800.0, 14_600, 19_500, 26_900, 34_800, 39_600, 37_200,
-        31_500, 26_200, 23_800, 25_400, 29_700, 34_600, 40_800,
-        46_900, 52_300, 55_800, 54_600, 50_200, 43_700, 36_900,
-        32_800, 34_200, 38_600, 43_900, 47_100, 45_900, 44_100,
-        43_500, totalEarnings
+        12_200.0, 13_100, 14_800, 17_600, 20_900, 24_700, 28_300,
+        31_900, 34_600, 33_200, 30_100, 27_400, 25_900, 27_200,
+        29_800, 33_600, 37_900, 41_500, 44_300, 42_100, 39_600,
+        41_800, 46_400, 50_900, 54_600, 52_300, 47_800, 42_900,
+        38_500, 35_900, 37_200, 40_600, 44_900, 48_200, 46_700,
+        43_600, 41_900, 44_200, 46_100, 45_300, 43_800, totalEarnings
     ]
+
+    private static let dayTextureProfile = makeTextureProfile(
+        values: dayAnchors,
+        seed: 7.3,
+        amplitude: 0.026
+    )
+    private static let weekTextureProfile = makeTextureProfile(
+        values: weekAnchors,
+        seed: 19.1,
+        amplitude: 0.020
+    )
+    private static let monthTextureProfile = makeTextureProfile(
+        values: monthAnchors,
+        seed: 31.7,
+        amplitude: 0.016
+    )
+    private static let yearTextureProfile = makeTextureProfile(
+        values: yearAnchors,
+        seed: 47.9,
+        amplitude: 0.012
+    )
 
     private static let dayTrend = MonotoneTrend(values: dayAnchors)
     private static let weekTrend = MonotoneTrend(values: weekAnchors)
@@ -234,7 +270,7 @@ private enum EarningsMockData {
         let envelope = sin(.pi * progress)
         let minute = Double(clampedIndex)
 
-        let value = zip(sources, sourceProfiles).reduce(0.0) { result, pair in
+        let sourceValue = zip(sources, sourceProfiles).reduce(0.0) { result, pair in
             let (source, profile) = pair
             let share = source.earnings / totalEarnings
             let shortWave = sin(2 * .pi * minute / profile.shortCycleMinutes + profile.phase)
@@ -242,6 +278,7 @@ private enum EarningsMockData {
             let modulation = envelope * profile.amplitude * (shortWave * 0.25 + rangeWave * 0.75)
             return result + baseline * share * (1 + modulation)
         }
+        let value = sourceValue + marketTexture(for: range, progress: progress)
 
         let date = referenceDate.addingTimeInterval(TimeInterval(clampedIndex - range.minuteCount) * 60)
         return EarningsPoint(date: date, value: clampedIndex == range.minuteCount ? totalEarnings : value)
@@ -258,6 +295,55 @@ private enum EarningsMockData {
 
     private static func trendValue(for range: EarningsRange, progress: Double) -> Double {
         trend(for: range).value(at: progress)
+    }
+
+    private static func makeTextureProfile(
+        values: [Double],
+        seed: Double,
+        amplitude: Double
+    ) -> MarketTextureProfile {
+        let lowerValue = values.min() ?? 0
+        let upperValue = values.max() ?? lowerValue
+        return MarketTextureProfile(
+            seed: seed,
+            amplitude: amplitude,
+            valueSpan: max(upperValue - lowerValue, 1)
+        )
+    }
+
+    private static func textureProfile(for range: EarningsRange) -> MarketTextureProfile {
+        switch range {
+        case .day: dayTextureProfile
+        case .week: weekTextureProfile
+        case .month: monthTextureProfile
+        case .year: yearTextureProfile
+        }
+    }
+
+    private static func marketTexture(for range: EarningsRange, progress: Double) -> Double {
+        let profile = textureProfile(for: range)
+        let slowNoise = smoothNoise(at: progress * 37, seed: profile.seed)
+        let mediumNoise = smoothNoise(at: progress * 113, seed: profile.seed + 17.3)
+        let fastNoise = smoothNoise(at: progress * 281, seed: profile.seed + 41.9)
+        let activityNoise = abs(smoothNoise(at: progress * 9, seed: profile.seed + 83.1))
+        let activity = 0.72 + activityNoise * 0.28
+        let texture = slowNoise * 0.52 + mediumNoise * 0.31 + fastNoise * 0.17
+
+        return sin(.pi * progress) * profile.valueSpan * profile.amplitude * activity * texture
+    }
+
+    private static func smoothNoise(at position: Double, seed: Double) -> Double {
+        let lowerPosition = floor(position)
+        let fraction = position - lowerPosition
+        let easedFraction = fraction * fraction * (3 - 2 * fraction)
+        let lowerValue = signedNoiseSample(at: lowerPosition, seed: seed)
+        let upperValue = signedNoiseSample(at: lowerPosition + 1, seed: seed)
+        return lowerValue + (upperValue - lowerValue) * easedFraction
+    }
+
+    private static func signedNoiseSample(at position: Double, seed: Double) -> Double {
+        let rawValue = sin(position * 12.9898 + seed * 78.233) * 43_758.5453
+        return (rawValue - floor(rawValue)) * 2 - 1
     }
 
     private static func makeSeries(for range: EarningsRange) -> EarningsSeries {
@@ -472,7 +558,7 @@ struct DashboardView: View {
                 EarningsCurveLayer(
                     points: chartPoints,
                     chartDomain: chartDomain,
-                    lineOpacity: 0.035,
+                    lineOpacity: 0.015,
                     glowOpacity: 0
                 )
                 .mask {
@@ -577,7 +663,7 @@ private struct CurveSelectionMask: View {
     var body: some View {
         GeometryReader { geometry in
             let selectedWidth = geometry.size.width * min(max(progress, 0), 1)
-            let fadeWidth = min(max(geometry.size.width - selectedWidth, 0), 26)
+            let fadeWidth = min(max(geometry.size.width - selectedWidth, 0), 6)
 
             if selectedWidth >= geometry.size.width {
                 Color.white
