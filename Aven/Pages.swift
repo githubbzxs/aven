@@ -593,8 +593,9 @@ struct DashboardView: View {
 
     private var dateLabels: some View {
         HStack(spacing: 0) {
-            ForEach(Array(dateLabelPoints.enumerated()), id: \.element.id) { index, point in
+            ForEach(Array(dateLabelPoints.enumerated()), id: \.offset) { index, point in
                 Text(point.date.axisText(for: selectedRange))
+                    .contentTransition(.opacity)
                     .frame(
                         maxWidth: .infinity,
                         alignment: index == 0 ? .leading : index == dateLabelPoints.count - 1 ? .trailing : .center
@@ -602,7 +603,9 @@ struct DashboardView: View {
             }
         }
         .font(.caption2)
+        .monospacedDigit()
         .foregroundStyle(.tertiary)
+        .animation(.easeInOut(duration: 0.36), value: selectedRange)
         .padding(.top, 5)
     }
 
