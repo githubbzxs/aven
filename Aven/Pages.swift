@@ -619,11 +619,9 @@ struct DashboardView: View {
     }
 
     private var rangeSelector: some View {
-        HStack(spacing: 2) {
-            ForEach(EarningsRange.allCases) { range in
-                Button {
-                    selectRange(range)
-                } label: {
+        GeometryReader { geometry in
+            HStack(spacing: 2) {
+                ForEach(EarningsRange.allCases) { range in
                     Text(range.rawValue)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(selectedRange == range ? Color.accentColor : .secondary)
@@ -635,30 +633,45 @@ struct DashboardView: View {
                                 Capsule()
                                     .fill(Color.accentColor)
                                     .frame(width: 30, height: 3)
-                                    .shadow(color: Color.accentColor.opacity(0.34), radius: 3)
+                                    .shadow(color: Color.accentColor.opacity(0.38), radius: 3.5)
                                     .matchedGeometryEffect(
                                         id: "range-selector-indicator",
                                         in: rangeSelectorNamespace
                                     )
                                     .scaleEffect(
                                         x: rangeIndicatorStretch,
-                                        y: 1,
+                                        y: max(0.78, 1 - (rangeIndicatorStretch - 1) * 0.38),
                                         anchor: rangeIndicatorMovesRight ? .trailing : .leading
                                     )
                             }
                         }
+                        .accessibilityElement()
+                        .accessibilityLabel("Show \(range.rawValue) earnings")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAddTraits(selectedRange == range ? .isSelected : [])
+                        .accessibilityAction {
+                            selectRange(range)
+                        }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Show \(range.rawValue) earnings")
-                .accessibilityAddTraits(selectedRange == range ? .isSelected : [])
             }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { gesture in
+                        scrubRange(
+                            at: gesture.location.x,
+                            selectorWidth: geometry.size.width
+                        )
+                    }
+            )
         }
+        .frame(height: 34)
         .animation(
-            .spring(response: 0.46, dampingFraction: 0.72, blendDuration: 0.08),
+            .spring(response: 0.34, dampingFraction: 0.52, blendDuration: 0.04),
             value: selectedRange
         )
         .animation(
-            .spring(response: 0.34, dampingFraction: 0.64, blendDuration: 0.05),
+            .spring(response: 0.25, dampingFraction: 0.44, blendDuration: 0.02),
             value: rangeIndicatorStretch
         )
         .sensoryFeedback(
@@ -669,7 +682,7 @@ struct DashboardView: View {
             guard rangeIndicatorStretch > 1 else { return }
 
             do {
-                try await Task.sleep(nanoseconds: 160_000_000)
+                try await Task.sleep(nanoseconds: 115_000_000)
             } catch {
                 return
             }
@@ -678,6 +691,18 @@ struct DashboardView: View {
             rangeIndicatorStretch = 1
         }
         .padding(.top, 17)
+    }
+
+    private func scrubRange(at xPosition: CGFloat, selectorWidth: CGFloat) {
+        guard selectorWidth > 0 else { return }
+
+        let ranges = EarningsRange.allCases
+        let segmentWidth = selectorWidth / CGFloat(ranges.count)
+        guard segmentWidth > 0 else { return }
+
+        let clampedX = min(max(xPosition, 0), selectorWidth - 0.001)
+        let index = min(max(Int(clampedX / segmentWidth), 0), ranges.count - 1)
+        selectRange(ranges[index])
     }
 
     private func selectRange(_ range: EarningsRange) {
@@ -689,7 +714,7 @@ struct DashboardView: View {
         let distance = abs(nextIndex - currentIndex)
 
         rangeIndicatorMovesRight = nextIndex > currentIndex
-        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.16, 0.42)
+        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.24, 0.58)
         rangeSelectionCycle += 1
         selectedPoint = nil
         displayedPoint = nil
