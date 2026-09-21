@@ -630,14 +630,12 @@ struct DashboardView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 34)
                         .contentShape(Rectangle())
-                        .background {
+                        .overlay(alignment: .bottom) {
                             if selectedRange == range {
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(Color.accentColor.opacity(0.17))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                            .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
-                                    }
+                                Capsule()
+                                    .fill(Color.accentColor)
+                                    .frame(width: 30, height: 3)
+                                    .shadow(color: Color.accentColor.opacity(0.34), radius: 3)
                                     .matchedGeometryEffect(
                                         id: "range-selector-indicator",
                                         in: rangeSelectorNamespace
@@ -655,12 +653,6 @@ struct DashboardView: View {
                 .accessibilityAddTraits(selectedRange == range ? .isSelected : [])
             }
         }
-        .padding(3)
-        .background(
-            Color.white.opacity(0.045),
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .animation(
             .spring(response: 0.46, dampingFraction: 0.72, blendDuration: 0.08),
             value: selectedRange
