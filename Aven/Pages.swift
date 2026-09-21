@@ -1,5 +1,6 @@
 import Charts
 import SwiftUI
+import UIKit
 
 private enum EarningsRange: String, CaseIterable, Identifiable {
     case day = "24H"
@@ -322,12 +323,12 @@ private enum EarningsMockData {
 
     private static func marketTexture(for range: EarningsRange, progress: Double) -> Double {
         let profile = textureProfile(for: range)
-        let slowNoise = smoothNoise(at: progress * 37, seed: profile.seed)
-        let mediumNoise = smoothNoise(at: progress * 113, seed: profile.seed + 17.3)
-        let fastNoise = smoothNoise(at: progress * 281, seed: profile.seed + 41.9)
+        let slowNoise = smoothNoise(at: progress * 31, seed: profile.seed)
+        let mediumNoise = smoothNoise(at: progress * 83, seed: profile.seed + 17.3)
+        let fastNoise = smoothNoise(at: progress * 157, seed: profile.seed + 41.9)
         let activityNoise = abs(smoothNoise(at: progress * 9, seed: profile.seed + 83.1))
         let activity = 0.72 + activityNoise * 0.28
-        let texture = slowNoise * 0.52 + mediumNoise * 0.31 + fastNoise * 0.17
+        let texture = slowNoise * 0.58 + mediumNoise * 0.30 + fastNoise * 0.12
 
         return sin(.pi * progress) * profile.valueSpan * profile.amplitude * activity * texture
     }
@@ -335,7 +336,7 @@ private enum EarningsMockData {
     private static func smoothNoise(at position: Double, seed: Double) -> Double {
         let lowerPosition = floor(position)
         let fraction = position - lowerPosition
-        let easedFraction = fraction * fraction * (3 - 2 * fraction)
+        let easedFraction = fraction * fraction * fraction * (fraction * (fraction * 6 - 15) + 10)
         let lowerValue = signedNoiseSample(at: lowerPosition, seed: seed)
         let upperValue = signedNoiseSample(at: lowerPosition + 1, seed: seed)
         return lowerValue + (upperValue - lowerValue) * easedFraction
@@ -404,6 +405,8 @@ struct DashboardView: View {
     @State private var rangeIndicatorStretch: CGFloat = 1
     @State private var rangeIndicatorMovesRight = true
     @State private var rangeSelectionCycle = 0
+    @State private var rangeScrubIndex: Int?
+    @State private var rangeHapticGenerator = UIImpactFeedbackGenerator(style: .heavy)
 
     private var earningsSeries: EarningsSeries {
         EarningsMockData.series(for: selectedRange)
@@ -632,7 +635,7 @@ struct DashboardView: View {
                             if selectedRange == range {
                                 Capsule()
                                     .fill(Color.accentColor)
-                                    .frame(width: 30, height: 3)
+                                    .frame(width: 26, height: 3)
                                     .shadow(color: Color.accentColor.opacity(0.38), radius: 3.5)
                                     .matchedGeometryEffect(
                                         id: "range-selector-indicator",
@@ -640,7 +643,7 @@ struct DashboardView: View {
                                     )
                                     .scaleEffect(
                                         x: rangeIndicatorStretch,
-                                        y: max(0.93, 1 - (rangeIndicatorStretch - 1) * 0.18),
+                                        y: max(0.90, 1 - (rangeIndicatorStretch - 1) * 0.22),
                                         anchor: rangeIndicatorMovesRight ? .trailing : .leading
                                     )
                             }
@@ -663,32 +666,35 @@ struct DashboardView: View {
                             selectorWidth: geometry.size.width
                         )
                     }
+                    .onEnded { _ in
+                        rangeScrubIndex = nil
+                        rangeHapticGenerator.prepare()
+                    }
             )
         }
         .frame(height: 34)
         .animation(
-            .spring(response: 0.44, dampingFraction: 0.84, blendDuration: 0.08),
+            .spring(response: 0.42, dampingFraction: 0.76, blendDuration: 0.07),
             value: selectedRange
         )
         .animation(
-            .spring(response: 0.36, dampingFraction: 0.80, blendDuration: 0.06),
+            .spring(response: 0.34, dampingFraction: 0.70, blendDuration: 0.05),
             value: rangeIndicatorStretch
-        )
-        .sensoryFeedback(
-            .impact(weight: .heavy, intensity: 1.0),
-            trigger: selectedRange
         )
         .task(id: rangeSelectionCycle) {
             guard rangeIndicatorStretch > 1 else { return }
 
             do {
-                try await Task.sleep(nanoseconds: 150_000_000)
+                try await Task.sleep(nanoseconds: 145_000_000)
             } catch {
                 return
             }
 
             guard !Task.isCancelled else { return }
             rangeIndicatorStretch = 1
+        }
+        .onAppear {
+            rangeHapticGenerator.prepare()
         }
         .padding(.top, 17)
     }
@@ -701,8 +707,33 @@ struct DashboardView: View {
         guard segmentWidth > 0 else { return }
 
         let clampedX = min(max(xPosition, 0), selectorWidth - 0.001)
-        let index = min(max(Int(clampedX / segmentWidth), 0), ranges.count - 1)
-        selectRange(ranges[index])
+        let rawIndex = min(max(Int(clampedX / segmentWidth), 0), ranges.count - 1)
+
+        guard let currentIndex = rangeScrubIndex else {
+            rangeScrubIndex = rawIndex
+            rangeHapticGenerator.prepare()
+            selectRange(ranges[rawIndex])
+            return
+        }
+
+        let hysteresis = min(segmentWidth * 0.12, 12)
+        var nextIndex = currentIndex
+
+        while nextIndex < ranges.count - 1 {
+            let boundary = CGFloat(nextIndex + 1) * segmentWidth
+            guard clampedX >= boundary + hysteresis else { break }
+            nextIndex += 1
+        }
+
+        while nextIndex > 0 {
+            let boundary = CGFloat(nextIndex) * segmentWidth
+            guard clampedX <= boundary - hysteresis else { break }
+            nextIndex -= 1
+        }
+
+        guard nextIndex != currentIndex else { return }
+        rangeScrubIndex = nextIndex
+        selectRange(ranges[nextIndex])
     }
 
     private func selectRange(_ range: EarningsRange) {
@@ -714,12 +745,14 @@ struct DashboardView: View {
         let distance = abs(nextIndex - currentIndex)
 
         rangeIndicatorMovesRight = nextIndex > currentIndex
-        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.17, 0.40)
+        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.18, 0.42)
         rangeSelectionCycle += 1
         selectedPoint = nil
         displayedPoint = nil
         revealProgress = 0
         selectedRange = range
+        rangeHapticGenerator.impactOccurred(intensity: 1.0)
+        rangeHapticGenerator.prepare()
     }
 }
 
