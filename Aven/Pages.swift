@@ -635,7 +635,7 @@ struct DashboardView: View {
                             if selectedRange == range {
                                 Capsule()
                                     .fill(Color.accentColor)
-                                    .frame(width: 26, height: 3)
+                                    .frame(width: 20, height: 3)
                                     .shadow(color: Color.accentColor.opacity(0.38), radius: 3.5)
                                     .matchedGeometryEffect(
                                         id: "range-selector-indicator",
