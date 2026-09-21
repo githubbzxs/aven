@@ -22,15 +22,16 @@
 
   <rect x="55" y="170" width="1330" height="400" rx="32" fill="#1d1e1c"/>
   <circle cx="105" cy="224" r="24" fill="#9757ff"/><text x="105" y="232" text-anchor="middle" class="s" fill="#fff">1</text>
-  <text x="155" y="218" class="h">历史点之后：稍亮，但继续渐隐</text>
-  <text x="155" y="256" class="b">不要整条未来曲线一直留着；只在选中点右侧保留一小段可见尾巴，然后消失。</text>
+  <text x="155" y="218" class="h">历史点之后：预亮不动，只抬高未预亮底线</text>
+  <text x="155" y="256" class="b">选中点后的短预亮保持原样；再往后的整段曲线只把基础亮度稍微抬高，仍保持弱层级。</text>
   <path d="M115 455 C220 385,290 475,390 390 S535 365,625 310 S760 335,845 275 S980 430,1090 330" fill="none" stroke="#9b5cff" stroke-width="10" opacity=".22" filter="url(#glow)"/>
   <path d="M115 455 C220 385,290 475,390 390 S535 365,625 310 S760 335,845 275 S980 430,1090 330" fill="none" stroke="#9b5cff" stroke-width="4.5"/>
   <circle cx="850" cy="309" r="7" fill="#fff"/>
   <line x1="850" y1="282" x2="850" y2="468" stroke="#fff" stroke-opacity=".24" stroke-dasharray="4 7"/>
-  <path d="M850 309 C910 322,958 390,1020 390 S1100 334,1190 300 S1270 305,1340 342" fill="none" stroke="url(#futureFade)" stroke-width="4.5"/>
+  <path d="M850 309 C910 322,958 390,1020 390 S1100 334,1190 300 S1270 305,1340 342" fill="none" stroke="#9b5cff" stroke-opacity=".13" stroke-width="4.5"/>
+  <path d="M850 309 C861 311,872 315,883 321" fill="none" stroke="#9b5cff" stroke-opacity=".82" stroke-width="4.5"/>
   <text x="862" y="296" class="s">选中点</text>
-  <text x="985" y="518" class="b">稍亮 → 衰减 → 消失</text>
+  <text x="930" y="518" class="b">短预亮不变　·　后段底线轻微提亮</text>
 
   <rect x="55" y="610" width="1330" height="515" rx="32" fill="#1d1e1c"/>
   <circle cx="105" cy="664" r="24" fill="#9757ff"/><text x="105" y="672" text-anchor="middle" class="s" fill="#fff">2</text>
