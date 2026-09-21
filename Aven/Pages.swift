@@ -745,13 +745,13 @@ struct DashboardView: View {
         let distance = abs(nextIndex - currentIndex)
 
         rangeIndicatorMovesRight = nextIndex > currentIndex
-        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.17, 0.40)
+        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.17, 0.32)
         rangeSelectionCycle += 1
         selectedPoint = nil
         displayedPoint = nil
         revealProgress = 0
         selectedRange = range
-        rangeHapticGenerator.impactOccurred(intensity: 0.85)
+        rangeHapticGenerator.impactOccurred(intensity: 0.6)
         rangeHapticGenerator.prepare()
     }
 }
