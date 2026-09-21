@@ -394,12 +394,16 @@ private enum EarningsMockData {
 
 struct DashboardView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Namespace private var rangeSelectorNamespace
     @State private var selectedRange: EarningsRange = .month
     @State private var selectedPoint: EarningsPoint?
     @State private var displayedPoint: EarningsPoint?
     @State private var revealProgress = 0.0
     @State private var revealCycle = 0
     @State private var shouldRevealAfterBackground = false
+    @State private var rangeIndicatorStretch: CGFloat = 1
+    @State private var rangeIndicatorMovesRight = true
+    @State private var rangeSelectionCycle = 0
 
     private var earningsSeries: EarningsSeries {
         EarningsMockData.series(for: selectedRange)
@@ -569,7 +573,7 @@ struct DashboardView: View {
                     points: chartPoints,
                     chartDomain: chartDomain,
                     lineOpacity: 0.96,
-                    glowOpacity: 0.18
+                    glowOpacity: 0.24
                 )
                 .mask {
                     CurveSelectionMask(progress: highlightedProgress)
@@ -615,30 +619,90 @@ struct DashboardView: View {
     }
 
     private var rangeSelector: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 2) {
             ForEach(EarningsRange.allCases) { range in
                 Button {
-                    guard range != selectedRange else { return }
-                    selectedPoint = nil
-                    displayedPoint = nil
-                    revealProgress = 0
-                    selectedRange = range
+                    selectRange(range)
                 } label: {
                     Text(range.rawValue)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(selectedRange == range ? Color.accentColor : .secondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(
-                            selectedRange == range ? Color.accentColor.opacity(0.15) : .clear,
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        )
+                        .frame(height: 34)
+                        .contentShape(Rectangle())
+                        .background {
+                            if selectedRange == range {
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(Color.accentColor.opacity(0.17))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
+                                    }
+                                    .matchedGeometryEffect(
+                                        id: "range-selector-indicator",
+                                        in: rangeSelectorNamespace
+                                    )
+                                    .scaleEffect(
+                                        x: rangeIndicatorStretch,
+                                        y: 1,
+                                        anchor: rangeIndicatorMovesRight ? .trailing : .leading
+                                    )
+                            }
+                        }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Show \(range.rawValue) earnings")
+                .accessibilityAddTraits(selectedRange == range ? .isSelected : [])
             }
         }
+        .padding(3)
+        .background(
+            Color.white.opacity(0.045),
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .animation(
+            .spring(response: 0.46, dampingFraction: 0.72, blendDuration: 0.08),
+            value: selectedRange
+        )
+        .animation(
+            .spring(response: 0.34, dampingFraction: 0.64, blendDuration: 0.05),
+            value: rangeIndicatorStretch
+        )
+        .sensoryFeedback(
+            .impact(weight: .heavy, intensity: 1.0),
+            trigger: selectedRange
+        )
+        .task(id: rangeSelectionCycle) {
+            guard rangeIndicatorStretch > 1 else { return }
+
+            do {
+                try await Task.sleep(nanoseconds: 160_000_000)
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled else { return }
+            rangeIndicatorStretch = 1
+        }
         .padding(.top, 17)
+    }
+
+    private func selectRange(_ range: EarningsRange) {
+        guard range != selectedRange else { return }
+
+        let ranges = EarningsRange.allCases
+        let currentIndex = ranges.firstIndex(of: selectedRange) ?? 0
+        let nextIndex = ranges.firstIndex(of: range) ?? currentIndex
+        let distance = abs(nextIndex - currentIndex)
+
+        rangeIndicatorMovesRight = nextIndex > currentIndex
+        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.16, 0.42)
+        rangeSelectionCycle += 1
+        selectedPoint = nil
+        displayedPoint = nil
+        revealProgress = 0
+        selectedRange = range
     }
 }
 
