@@ -18,7 +18,7 @@
 
   <rect width="1440" height="1650" fill="#141513"/>
   <text x="70" y="82" class="title">Aven 曲线交互动效图解</text>
-  <text x="72" y="126" class="b">更清楚、更轻：曲线只在真正切换数据时动。</text>
+  <text x="72" y="126" class="b">更清楚、更轻：切换数据时只让新曲线从空白绘入。</text>
 
   <rect x="55" y="170" width="1330" height="400" rx="32" fill="#1d1e1c"/>
   <circle cx="105" cy="224" r="24" fill="#9757ff"/><text x="105" y="232" text-anchor="middle" class="s" fill="#fff">1</text>
@@ -35,38 +35,36 @@
 
   <rect x="55" y="610" width="1330" height="515" rx="32" fill="#1d1e1c"/>
   <circle cx="105" cy="664" r="24" fill="#9757ff"/><text x="105" y="672" text-anchor="middle" class="s" fill="#fff">2</text>
-  <text x="155" y="658" class="h">周期切换：旧线向前退场，新线同向进场</text>
-  <text x="155" y="696" class="b">两条线都沿时间方向从左往右运动，并保持重叠，不等待旧线完全结束。</text>
+  <text x="155" y="658" class="h">周期切换：旧线立即清空，新线从空白绘入</text>
+  <text x="155" y="696" class="b">不再播放旧线退场或双线重叠；选中新周期后图表先归零，再只绘制新线。</text>
 
   <g transform="translate(95 760)">
     <g>
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
-      <path d="M25 145 C75 112,105 157,150 112 S215 70,253 105" fill="none" stroke="#8259bd" stroke-width="4"/>
-      <text x="139" y="188" text-anchor="middle" class="b">0 ms · 旧线完整</text>
+      <text x="139" y="112" text-anchor="middle" class="s" fill="#666">空白</text>
+      <text x="139" y="188" text-anchor="middle" class="b">0 ms · 图表归零</text>
     </g>
     <g transform="translate(318 0)">
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
-      <path d="M107 154 C124 145,137 126,150 112 S215 70,253 105" fill="none" stroke="#8259bd" stroke-width="4"/>
       <path d="M25 150 C55 130,70 128,88 118" fill="none" stroke="#9b5cff" stroke-width="5"/>
-      <text x="139" y="188" text-anchor="middle" class="b">360 ms · 旧退 / 新进</text>
+      <text x="139" y="188" text-anchor="middle" class="b">约 360 ms · 新线绘入</text>
     </g>
     <g transform="translate(636 0)">
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
-      <path d="M208 75 C225 74,241 91,253 105" fill="none" stroke="#8259bd" stroke-width="4"/>
       <path d="M25 150 C65 126,96 142,135 105 S190 92,210 80" fill="none" stroke="#9b5cff" stroke-width="5"/>
-      <text x="139" y="188" text-anchor="middle" class="b">1.10 s · 新线占主导</text>
+      <text x="139" y="188" text-anchor="middle" class="b">约 800 ms · 继续绘入</text>
     </g>
     <g transform="translate(954 0)">
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
       <path d="M25 150 C65 126,96 142,135 105 S190 92,253 65" fill="none" stroke="#9b5cff" stroke-width="5"/>
-      <text x="139" y="188" text-anchor="middle" class="b">1.43 s · 新线完整</text>
+      <text x="139" y="188" text-anchor="middle" class="b">1.20–1.60 s · 完整</text>
     </g>
   </g>
-  <text x="105" y="1030" class="s" fill="#a989d6">旧线：约 1.10 s 从左端向右擦除</text>
-  <text x="500" y="1030" class="s">＋</text>
-  <text x="545" y="1030" class="s" fill="#c19aff">新线：延后 0.18 s，约 1.25 s 绘完</text>
-  <text x="1050" y="1030" class="s">总时长约 1.43 s</text>
-  <text x="105" y="1080" class="b">新周期始终保留完整暗线；旧线与新线都向前，连续切换也不得出现空白图。</text>
+  <text x="105" y="1030" class="s" fill="#a989d6">旧线：切换时立即清空，不播放退场</text>
+  <text x="520" y="1030" class="s">＋</text>
+  <text x="565" y="1030" class="s" fill="#c19aff">新线：从空白左端开始，约 1.20–1.60 s 绘完</text>
+  <text x="1120" y="1030" class="s">无双线重叠</text>
+  <text x="105" y="1080" class="b">连续滑过多个周期时，当前绘制立即清空，只从最新选择的周期重新开始。</text>
 
   <rect x="55" y="1165" width="1330" height="390" rx="32" fill="#1d1e1c"/>
   <circle cx="105" cy="1219" r="24" fill="#9757ff"/><text x="105" y="1227" text-anchor="middle" class="s" fill="#fff">3</text>
