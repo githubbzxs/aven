@@ -565,17 +565,29 @@ struct DashboardView: View {
                 }
             }
 
-            EarningsCurveLayer(
-                points: chartPoints,
-                chartDomain: chartDomain,
-                lineOpacity: 0.96,
-                glowOpacity: 0.24
-            )
-            .mask {
-                CurveSelectionMask(progress: highlightedProgress)
-            }
-            .mask {
-                CurveRevealMask(progress: incomingRevealProgress)
+            ZStack {
+                EarningsCurveLayer(
+                    points: chartPoints,
+                    chartDomain: chartDomain,
+                    lineOpacity: 0.04,
+                    glowOpacity: 0
+                )
+                .mask {
+                    CurveRevealMask(progress: incomingRevealProgress)
+                }
+
+                EarningsCurveLayer(
+                    points: chartPoints,
+                    chartDomain: chartDomain,
+                    lineOpacity: 0.96,
+                    glowOpacity: 0.24
+                )
+                .mask {
+                    CurveSelectionMask(progress: highlightedProgress)
+                }
+                .mask {
+                    CurveRevealMask(progress: incomingRevealProgress)
+                }
             }
             .compositingGroup()
             .mask {
@@ -771,9 +783,7 @@ private struct CurveSelectionMask: View {
     var body: some View {
         GeometryReader { geometry in
             let selectedWidth = geometry.size.width * min(max(progress, 0), 1)
-            let remainingWidth = max(geometry.size.width - selectedWidth, 0)
-            let preferredFadeWidth = min(max(geometry.size.width * 0.16, 44), 72)
-            let fadeWidth = min(remainingWidth, preferredFadeWidth)
+            let fadeWidth = min(max(geometry.size.width - selectedWidth, 0), 6)
 
             if selectedWidth >= geometry.size.width {
                 Color.white
@@ -784,11 +794,7 @@ private struct CurveSelectionMask: View {
                         .frame(width: selectedWidth)
 
                     LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(0.52), location: 0),
-                            .init(color: .white.opacity(0.22), location: 0.48),
-                            .init(color: .clear, location: 1)
-                        ],
+                        colors: [.white, .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
