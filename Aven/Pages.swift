@@ -394,13 +394,13 @@ private enum EarningsMockData {
 }
 
 struct DashboardView: View {
-    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedRange: EarningsRange = .month
     @State private var selectedPoint: EarningsPoint?
     @State private var displayedPoint: EarningsPoint?
-    @State private var revealProgress = 0.0
-    @State private var revealCycle = 0
-    @State private var shouldRevealAfterBackground = false
+    @State private var incomingRevealProgress = 1.0
+    @State private var outgoingRange: EarningsRange?
+    @State private var outgoingRevealProgress = 0.0
+    @State private var rangeTransitionCycle = 0
     @State private var rangeScrubIndex: Int?
     @State private var rangeHighlightVisible = false
     @State private var rangeHighlightCycle = 0
@@ -432,8 +432,12 @@ struct DashboardView: View {
     }
 
     private var chartDomain: ClosedRange<Double> {
-        let lowerValue = earningsSeries.valueDomain.lowerBound
-        let upperValue = earningsSeries.valueDomain.upperBound
+        chartDomain(for: earningsSeries)
+    }
+
+    private func chartDomain(for series: EarningsSeries) -> ClosedRange<Double> {
+        let lowerValue = series.valueDomain.lowerBound
+        let upperValue = series.valueDomain.upperBound
         let spread = Swift.max(upperValue - lowerValue, 1)
         let lowerBound = Swift.max(0, lowerValue - spread * 0.12)
 
@@ -453,32 +457,6 @@ struct DashboardView: View {
         guard fullInterval > 0 else { return 1 }
 
         return min(max(selectedPoint.date.timeIntervalSince(firstDate) / fullInterval, 0), 1)
-    }
-
-    private var revealTaskID: String {
-        "\(selectedRange.rawValue)-\(revealCycle)"
-    }
-
-    private var revealDuration: Double {
-        guard
-            chartPoints.count > 1,
-            let firstPoint = chartPoints.first,
-            let lastPoint = chartPoints.last
-        else {
-            return 1.20
-        }
-
-        let dateSpan = max(lastPoint.date.timeIntervalSince(firstPoint.date), 1)
-        let valueSpan = max(chartDomain.upperBound - chartDomain.lowerBound, 1)
-        let chartAspectRatio = 252.0 / 353.0
-
-        let pathLength = zip(chartPoints, chartPoints.dropFirst()).reduce(0.0) { length, pair in
-            let horizontalDistance = pair.1.date.timeIntervalSince(pair.0.date) / dateSpan
-            let verticalDistance = (pair.1.value - pair.0.value) / valueSpan * chartAspectRatio
-            return length + (horizontalDistance * horizontalDistance + verticalDistance * verticalDistance).squareRoot()
-        }
-
-        return min(max(1.20 + (pathLength - 1.60) * 0.72, 1.20), 1.60)
     }
 
     private var dateLabelPoints: [EarningsPoint] {
@@ -508,24 +486,34 @@ struct DashboardView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .task(id: revealTaskID) {
-            await Task.yield()
-            guard !Task.isCancelled, revealProgress < 1 else { return }
+        .task(id: rangeTransitionCycle) {
+            guard outgoingRange != nil else { return }
 
-            withAnimation(.timingCurve(0.24, 0.68, 0.30, 1, duration: revealDuration)) {
-                revealProgress = 1
+            withAnimation(.timingCurve(0.30, 0.00, 0.70, 1, duration: 0.16)) {
+                outgoingRevealProgress = 0
             }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .background {
-                selectedPoint = nil
-                displayedPoint = nil
-                revealProgress = 0
-                shouldRevealAfterBackground = true
-            } else if newPhase == .active, shouldRevealAfterBackground {
-                shouldRevealAfterBackground = false
-                revealCycle += 1
+
+            do {
+                try await Task.sleep(nanoseconds: 35_000_000)
+            } catch {
+                return
             }
+
+            guard !Task.isCancelled else { return }
+
+            withAnimation(.timingCurve(0.24, 0.68, 0.30, 1, duration: 0.22)) {
+                incomingRevealProgress = 1
+            }
+
+            do {
+                try await Task.sleep(nanoseconds: 225_000_000)
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled else { return }
+            outgoingRange = nil
+            outgoingRevealProgress = 0
         }
         .accessibilityIdentifier("screen.dashboard")
     }
@@ -559,29 +547,35 @@ struct DashboardView: View {
 
     private var earningsChart: some View {
         ZStack {
-            ZStack {
-                EarningsCurveLayer(
-                    points: chartPoints,
-                    chartDomain: chartDomain,
-                    lineOpacity: 0.015,
-                    glowOpacity: 0
-                )
-                .mask {
-                    CurveRevealMask(progress: revealProgress)
-                }
+            if let outgoingRange {
+                let outgoingSeries = EarningsMockData.series(for: outgoingRange)
 
                 EarningsCurveLayer(
-                    points: chartPoints,
-                    chartDomain: chartDomain,
-                    lineOpacity: 0.96,
-                    glowOpacity: 0.24
+                    points: outgoingSeries.chartPoints,
+                    chartDomain: chartDomain(for: outgoingSeries),
+                    lineOpacity: 0.78,
+                    glowOpacity: 0.14
                 )
                 .mask {
-                    CurveSelectionMask(progress: highlightedProgress)
+                    CurveRevealMask(progress: outgoingRevealProgress)
                 }
+                .compositingGroup()
                 .mask {
-                    CurveRevealMask(progress: revealProgress)
+                    CurveEdgeFadeMask()
                 }
+            }
+
+            EarningsCurveLayer(
+                points: chartPoints,
+                chartDomain: chartDomain,
+                lineOpacity: 0.96,
+                glowOpacity: 0.24
+            )
+            .mask {
+                CurveSelectionMask(progress: highlightedProgress)
+            }
+            .mask {
+                CurveRevealMask(progress: incomingRevealProgress)
             }
             .compositingGroup()
             .mask {
@@ -738,10 +732,15 @@ struct DashboardView: View {
 
     private func selectRange(_ range: EarningsRange) {
         if range != selectedRange {
+            let outgoingStartProgress = incomingRevealProgress
+
             selectedPoint = nil
             displayedPoint = nil
-            revealProgress = 0
+            outgoingRange = selectedRange
+            outgoingRevealProgress = outgoingStartProgress
+            incomingRevealProgress = 0
             selectedRange = range
+            rangeTransitionCycle += 1
         }
 
         rangeHighlightVisible = true
@@ -772,7 +771,9 @@ private struct CurveSelectionMask: View {
     var body: some View {
         GeometryReader { geometry in
             let selectedWidth = geometry.size.width * min(max(progress, 0), 1)
-            let fadeWidth = min(max(geometry.size.width - selectedWidth, 0), 6)
+            let remainingWidth = max(geometry.size.width - selectedWidth, 0)
+            let preferredFadeWidth = min(max(geometry.size.width * 0.16, 44), 72)
+            let fadeWidth = min(remainingWidth, preferredFadeWidth)
 
             if selectedWidth >= geometry.size.width {
                 Color.white
@@ -783,7 +784,11 @@ private struct CurveSelectionMask: View {
                         .frame(width: selectedWidth)
 
                     LinearGradient(
-                        colors: [.white, .clear],
+                        stops: [
+                            .init(color: .white.opacity(0.52), location: 0),
+                            .init(color: .white.opacity(0.22), location: 0.48),
+                            .init(color: .clear, location: 1)
+                        ],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
