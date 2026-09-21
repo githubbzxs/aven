@@ -394,7 +394,7 @@ private enum EarningsMockData {
 }
 
 private enum ChartRangeTransitionTiming {
-    static let outgoingDuration = 0.85
+    static let outgoingDuration = 1.10
     static let incomingDelay = 0.18
     static let incomingDuration = 1.25
     static let outgoingCurve = (x1: 0.45, y1: 0.00, x2: 0.55, y2: 1.00)
@@ -409,7 +409,8 @@ struct DashboardView: View {
     @State private var displayedPoint: EarningsPoint?
     @State private var incomingRevealProgress = 1.0
     @State private var outgoingRange: EarningsRange?
-    @State private var outgoingRevealProgress = 0.0
+    @State private var outgoingExitProgress = 0.0
+    @State private var outgoingVisibleEndProgress = 0.0
     @State private var outgoingTransitionStartProgress = 0.0
     @State private var rangeTransitionStartedAt: Date?
     @State private var rangeTransitionCycle = 0
@@ -480,7 +481,9 @@ struct DashboardView: View {
         }
     }
 
-    private func rangeTransitionPresentation(at date: Date) -> (outgoing: Double, incoming: Double)? {
+    private func rangeTransitionPresentation(
+        at date: Date
+    ) -> (outgoingStart: Double, outgoingEnd: Double, incoming: Double)? {
         guard let rangeTransitionStartedAt else { return nil }
 
         let elapsed = max(date.timeIntervalSince(rangeTransitionStartedAt), 0)
@@ -492,7 +495,8 @@ struct DashboardView: View {
             x2: ChartRangeTransitionTiming.outgoingCurve.x2,
             y2: ChartRangeTransitionTiming.outgoingCurve.y2
         )
-        let outgoingProgress = outgoingTransitionStartProgress * (1 - outgoingCompletion)
+        let outgoingStartProgress = outgoingTransitionStartProgress
+            + (outgoingVisibleEndProgress - outgoingTransitionStartProgress) * outgoingCompletion
         let incomingTime = min(
             max(
                 (elapsed - ChartRangeTransitionTiming.incomingDelay)
@@ -509,7 +513,11 @@ struct DashboardView: View {
             y2: ChartRangeTransitionTiming.incomingCurve.y2
         )
 
-        return (outgoingProgress, incomingProgress)
+        return (
+            outgoingStartProgress,
+            outgoingVisibleEndProgress,
+            incomingProgress
+        )
     }
 
     private func cubicBezierProgress(
@@ -570,8 +578,11 @@ struct DashboardView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .task(id: rangeTransitionCycle) {
-            guard outgoingRange != nil else { return }
+        .task(id: rangeTransitionCycle) { [expectedTransitionCycle = rangeTransitionCycle] in
+            guard outgoingRange != nil else {
+                incomingRevealProgress = 1
+                return
+            }
 
             withAnimation(
                 .timingCurve(
@@ -582,7 +593,7 @@ struct DashboardView: View {
                     duration: ChartRangeTransitionTiming.outgoingDuration
                 )
             ) {
-                outgoingRevealProgress = 0
+                outgoingExitProgress = outgoingVisibleEndProgress
             }
 
             do {
@@ -593,7 +604,10 @@ struct DashboardView: View {
                 return
             }
 
-            guard !Task.isCancelled else { return }
+            guard
+                !Task.isCancelled,
+                expectedTransitionCycle == rangeTransitionCycle
+            else { return }
 
             withAnimation(
                 .timingCurve(
@@ -615,9 +629,15 @@ struct DashboardView: View {
                 return
             }
 
-            guard !Task.isCancelled else { return }
+            guard
+                !Task.isCancelled,
+                expectedTransitionCycle == rangeTransitionCycle
+            else { return }
+
+            incomingRevealProgress = 1
             outgoingRange = nil
-            outgoingRevealProgress = 0
+            outgoingExitProgress = 0
+            outgoingVisibleEndProgress = 0
             outgoingTransitionStartProgress = 0
             rangeTransitionStartedAt = nil
         }
@@ -663,7 +683,10 @@ struct DashboardView: View {
                     glowOpacity: 0.14
                 )
                 .mask {
-                    CurveRevealMask(progress: outgoingRevealProgress)
+                    CurveForwardExitMask(
+                        startProgress: outgoingExitProgress,
+                        endProgress: outgoingVisibleEndProgress
+                    )
                 }
                 .compositingGroup()
                 .mask {
@@ -678,9 +701,6 @@ struct DashboardView: View {
                     lineOpacity: 0.04,
                     glowOpacity: 0
                 )
-                .mask {
-                    CurveRevealMask(progress: incomingRevealProgress)
-                }
 
                 EarningsCurveLayer(
                     points: chartPoints,
@@ -853,7 +873,12 @@ struct DashboardView: View {
             let transitionDate = Date()
             let previousRange = selectedRange
             let presentation = rangeTransitionPresentation(at: transitionDate)
-            let outgoingProgress = presentation?.outgoing ?? 0
+            let outgoingStartProgress = presentation?.outgoingStart ?? 0
+            let outgoingEndProgress = presentation?.outgoingEnd ?? 0
+            let outgoingVisibleProgress = max(
+                outgoingEndProgress - outgoingStartProgress,
+                0
+            )
             let incomingProgress = presentation?.incoming ?? 1
 
             selectedPoint = nil
@@ -861,15 +886,17 @@ struct DashboardView: View {
 
             if
                 let currentOutgoingRange = outgoingRange,
-                outgoingProgress > incomingProgress
+                outgoingVisibleProgress > incomingProgress
             {
                 outgoingRange = currentOutgoingRange
-                outgoingRevealProgress = outgoingProgress
-                outgoingTransitionStartProgress = outgoingProgress
+                outgoingExitProgress = outgoingStartProgress
+                outgoingVisibleEndProgress = outgoingEndProgress
+                outgoingTransitionStartProgress = outgoingStartProgress
             } else {
                 outgoingRange = previousRange
-                outgoingRevealProgress = incomingProgress
-                outgoingTransitionStartProgress = incomingProgress
+                outgoingExitProgress = 0
+                outgoingVisibleEndProgress = incomingProgress
+                outgoingTransitionStartProgress = 0
             }
 
             incomingRevealProgress = 0
@@ -896,6 +923,26 @@ private struct CurveRevealMask: View {
                 .fill(.white)
                 .frame(width: revealedWidth)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct CurveForwardExitMask: View {
+    let startProgress: Double
+    let endProgress: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            let clampedStart = min(max(startProgress, 0), 1)
+            let clampedEnd = min(max(endProgress, clampedStart), 1)
+            let startOffset = geometry.size.width * clampedStart
+            let visibleWidth = geometry.size.width * (clampedEnd - clampedStart)
+
+            Rectangle()
+                .fill(.white)
+                .frame(width: visibleWidth)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .offset(x: startOffset)
         }
     }
 }
