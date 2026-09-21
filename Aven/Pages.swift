@@ -643,7 +643,7 @@ struct DashboardView: View {
                                     )
                                     .scaleEffect(
                                         x: rangeIndicatorStretch,
-                                        y: max(0.90, 1 - (rangeIndicatorStretch - 1) * 0.22),
+                                        y: max(0.92, 1 - (rangeIndicatorStretch - 1) * 0.20),
                                         anchor: rangeIndicatorMovesRight ? .trailing : .leading
                                     )
                             }
@@ -674,11 +674,11 @@ struct DashboardView: View {
         }
         .frame(height: 34)
         .animation(
-            .spring(response: 0.42, dampingFraction: 0.76, blendDuration: 0.07),
+            .spring(response: 0.43, dampingFraction: 0.80, blendDuration: 0.07),
             value: selectedRange
         )
         .animation(
-            .spring(response: 0.34, dampingFraction: 0.70, blendDuration: 0.05),
+            .spring(response: 0.35, dampingFraction: 0.76, blendDuration: 0.05),
             value: rangeIndicatorStretch
         )
         .task(id: rangeSelectionCycle) {
@@ -745,13 +745,13 @@ struct DashboardView: View {
         let distance = abs(nextIndex - currentIndex)
 
         rangeIndicatorMovesRight = nextIndex > currentIndex
-        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.18, 0.42)
+        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.17, 0.40)
         rangeSelectionCycle += 1
         selectedPoint = nil
         displayedPoint = nil
         revealProgress = 0
         selectedRange = range
-        rangeHapticGenerator.impactOccurred(intensity: 1.0)
+        rangeHapticGenerator.impactOccurred(intensity: 0.85)
         rangeHapticGenerator.prepare()
     }
 }
