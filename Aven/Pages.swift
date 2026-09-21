@@ -395,17 +395,15 @@ private enum EarningsMockData {
 
 struct DashboardView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Namespace private var rangeSelectorNamespace
     @State private var selectedRange: EarningsRange = .month
     @State private var selectedPoint: EarningsPoint?
     @State private var displayedPoint: EarningsPoint?
     @State private var revealProgress = 0.0
     @State private var revealCycle = 0
     @State private var shouldRevealAfterBackground = false
-    @State private var rangeIndicatorStretch: CGFloat = 1
-    @State private var rangeIndicatorMovesRight = true
-    @State private var rangeSelectionCycle = 0
     @State private var rangeScrubIndex: Int?
+    @State private var rangeHighlightVisible = false
+    @State private var rangeHighlightCycle = 0
     @State private var rangeHapticGenerator = UIImpactFeedbackGenerator(style: .heavy)
 
     private var earningsSeries: EarningsSeries {
@@ -625,36 +623,41 @@ struct DashboardView: View {
         GeometryReader { geometry in
             HStack(spacing: 2) {
                 ForEach(EarningsRange.allCases) { range in
-                    Text(range.rawValue)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(selectedRange == range ? Color.accentColor : .secondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 34)
-                        .contentShape(Rectangle())
-                        .overlay(alignment: .bottom) {
-                            if selectedRange == range {
-                                Capsule()
-                                    .fill(Color.accentColor)
-                                    .frame(width: 20, height: 3)
-                                    .shadow(color: Color.accentColor.opacity(0.38), radius: 3.5)
-                                    .matchedGeometryEffect(
-                                        id: "range-selector-indicator",
-                                        in: rangeSelectorNamespace
-                                    )
-                                    .scaleEffect(
-                                        x: rangeIndicatorStretch,
-                                        y: max(0.92, 1 - (rangeIndicatorStretch - 1) * 0.20),
-                                        anchor: rangeIndicatorMovesRight ? .trailing : .leading
-                                    )
-                            }
-                        }
-                        .accessibilityElement()
-                        .accessibilityLabel("Show \(range.rawValue) earnings")
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityAddTraits(selectedRange == range ? .isSelected : [])
-                        .accessibilityAction {
-                            selectRange(range)
-                        }
+                    VStack(spacing: 5) {
+                        Text(range.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(
+                                selectedRange == range && rangeHighlightVisible
+                                    ? Color.accentColor
+                                    : .secondary
+                            )
+
+                        Circle()
+                            .fill(
+                                selectedRange == range && rangeHighlightVisible
+                                    ? Color.accentColor
+                                    : Color.secondary.opacity(0.34)
+                            )
+                            .frame(width: 4, height: 4)
+                            .shadow(
+                                color: selectedRange == range && rangeHighlightVisible
+                                    ? Color.accentColor.opacity(0.38)
+                                    : .clear,
+                                radius: 2.5
+                            )
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 34)
+                    .contentShape(Rectangle())
+                    .animation(.easeOut(duration: 0.16), value: selectedRange)
+                    .animation(.easeOut(duration: 0.42), value: rangeHighlightVisible)
+                    .accessibilityElement()
+                    .accessibilityLabel("Show \(range.rawValue) earnings")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAddTraits(selectedRange == range ? .isSelected : [])
+                    .accessibilityAction {
+                        selectRange(range)
+                    }
                 }
             }
             .contentShape(Rectangle())
@@ -673,25 +676,17 @@ struct DashboardView: View {
             )
         }
         .frame(height: 34)
-        .animation(
-            .spring(response: 0.43, dampingFraction: 0.80, blendDuration: 0.07),
-            value: selectedRange
-        )
-        .animation(
-            .spring(response: 0.35, dampingFraction: 0.76, blendDuration: 0.05),
-            value: rangeIndicatorStretch
-        )
-        .task(id: rangeSelectionCycle) {
-            guard rangeIndicatorStretch > 1 else { return }
+        .task(id: rangeHighlightCycle) {
+            guard rangeHighlightVisible else { return }
 
             do {
-                try await Task.sleep(nanoseconds: 145_000_000)
+                try await Task.sleep(nanoseconds: 850_000_000)
             } catch {
                 return
             }
 
             guard !Task.isCancelled else { return }
-            rangeIndicatorStretch = 1
+            rangeHighlightVisible = false
         }
         .onAppear {
             rangeHapticGenerator.prepare()
@@ -739,18 +734,12 @@ struct DashboardView: View {
     private func selectRange(_ range: EarningsRange) {
         guard range != selectedRange else { return }
 
-        let ranges = EarningsRange.allCases
-        let currentIndex = ranges.firstIndex(of: selectedRange) ?? 0
-        let nextIndex = ranges.firstIndex(of: range) ?? currentIndex
-        let distance = abs(nextIndex - currentIndex)
-
-        rangeIndicatorMovesRight = nextIndex > currentIndex
-        rangeIndicatorStretch = 1 + min(CGFloat(distance) * 0.17, 0.32)
-        rangeSelectionCycle += 1
         selectedPoint = nil
         displayedPoint = nil
         revealProgress = 0
         selectedRange = range
+        rangeHighlightVisible = true
+        rangeHighlightCycle += 1
         rangeHapticGenerator.impactOccurred(intensity: 0.6)
         rangeHapticGenerator.prepare()
     }
