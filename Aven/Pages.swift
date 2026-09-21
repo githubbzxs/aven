@@ -393,6 +393,16 @@ private enum EarningsMockData {
     }
 }
 
+private enum ChartRangeTransitionTiming {
+    static let outgoingDuration = 0.85
+    static let incomingDelay = 0.18
+    static let incomingDuration = 1.25
+    static let outgoingCurve = (x1: 0.45, y1: 0.00, x2: 0.55, y2: 1.00)
+    static let incomingCurve = (x1: 0.25, y1: 0.10, x2: 0.25, y2: 1.00)
+    static let incomingDelayNanoseconds: UInt64 = 180_000_000
+    static let cleanupDelayNanoseconds: UInt64 = 1_270_000_000
+}
+
 struct DashboardView: View {
     @State private var selectedRange: EarningsRange = .month
     @State private var selectedPoint: EarningsPoint?
@@ -400,6 +410,8 @@ struct DashboardView: View {
     @State private var incomingRevealProgress = 1.0
     @State private var outgoingRange: EarningsRange?
     @State private var outgoingRevealProgress = 0.0
+    @State private var outgoingTransitionStartProgress = 0.0
+    @State private var rangeTransitionStartedAt: Date?
     @State private var rangeTransitionCycle = 0
     @State private var rangeScrubIndex: Int?
     @State private var rangeHighlightVisible = false
@@ -468,6 +480,78 @@ struct DashboardView: View {
         }
     }
 
+    private func rangeTransitionPresentation(at date: Date) -> (outgoing: Double, incoming: Double)? {
+        guard let rangeTransitionStartedAt else { return nil }
+
+        let elapsed = max(date.timeIntervalSince(rangeTransitionStartedAt), 0)
+        let outgoingTime = min(elapsed / ChartRangeTransitionTiming.outgoingDuration, 1)
+        let outgoingCompletion = cubicBezierProgress(
+            outgoingTime,
+            x1: ChartRangeTransitionTiming.outgoingCurve.x1,
+            y1: ChartRangeTransitionTiming.outgoingCurve.y1,
+            x2: ChartRangeTransitionTiming.outgoingCurve.x2,
+            y2: ChartRangeTransitionTiming.outgoingCurve.y2
+        )
+        let outgoingProgress = outgoingTransitionStartProgress * (1 - outgoingCompletion)
+        let incomingTime = min(
+            max(
+                (elapsed - ChartRangeTransitionTiming.incomingDelay)
+                    / ChartRangeTransitionTiming.incomingDuration,
+                0
+            ),
+            1
+        )
+        let incomingProgress = cubicBezierProgress(
+            incomingTime,
+            x1: ChartRangeTransitionTiming.incomingCurve.x1,
+            y1: ChartRangeTransitionTiming.incomingCurve.y1,
+            x2: ChartRangeTransitionTiming.incomingCurve.x2,
+            y2: ChartRangeTransitionTiming.incomingCurve.y2
+        )
+
+        return (outgoingProgress, incomingProgress)
+    }
+
+    private func cubicBezierProgress(
+        _ progress: Double,
+        x1: Double,
+        y1: Double,
+        x2: Double,
+        y2: Double
+    ) -> Double {
+        let clampedProgress = min(max(progress, 0), 1)
+        var lowerBound = 0.0
+        var upperBound = 1.0
+
+        for _ in 0..<12 {
+            let parameter = (lowerBound + upperBound) / 2
+            let x = cubicBezierCoordinate(parameter, control1: x1, control2: x2)
+
+            if x < clampedProgress {
+                lowerBound = parameter
+            } else {
+                upperBound = parameter
+            }
+        }
+
+        return cubicBezierCoordinate(
+            (lowerBound + upperBound) / 2,
+            control1: y1,
+            control2: y2
+        )
+    }
+
+    private func cubicBezierCoordinate(
+        _ parameter: Double,
+        control1: Double,
+        control2: Double
+    ) -> Double {
+        let inverse = 1 - parameter
+        return 3 * inverse * inverse * parameter * control1
+            + 3 * inverse * parameter * parameter * control2
+            + parameter * parameter * parameter
+    }
+
     var body: some View {
         ZStack {
             AppTheme.background
@@ -489,24 +573,44 @@ struct DashboardView: View {
         .task(id: rangeTransitionCycle) {
             guard outgoingRange != nil else { return }
 
-            withAnimation(.timingCurve(0.30, 0.00, 0.70, 1, duration: 0.16)) {
+            withAnimation(
+                .timingCurve(
+                    ChartRangeTransitionTiming.outgoingCurve.x1,
+                    ChartRangeTransitionTiming.outgoingCurve.y1,
+                    ChartRangeTransitionTiming.outgoingCurve.x2,
+                    ChartRangeTransitionTiming.outgoingCurve.y2,
+                    duration: ChartRangeTransitionTiming.outgoingDuration
+                )
+            ) {
                 outgoingRevealProgress = 0
             }
 
             do {
-                try await Task.sleep(nanoseconds: 35_000_000)
+                try await Task.sleep(
+                    nanoseconds: ChartRangeTransitionTiming.incomingDelayNanoseconds
+                )
             } catch {
                 return
             }
 
             guard !Task.isCancelled else { return }
 
-            withAnimation(.timingCurve(0.24, 0.68, 0.30, 1, duration: 0.22)) {
+            withAnimation(
+                .timingCurve(
+                    ChartRangeTransitionTiming.incomingCurve.x1,
+                    ChartRangeTransitionTiming.incomingCurve.y1,
+                    ChartRangeTransitionTiming.incomingCurve.x2,
+                    ChartRangeTransitionTiming.incomingCurve.y2,
+                    duration: ChartRangeTransitionTiming.incomingDuration
+                )
+            ) {
                 incomingRevealProgress = 1
             }
 
             do {
-                try await Task.sleep(nanoseconds: 225_000_000)
+                try await Task.sleep(
+                    nanoseconds: ChartRangeTransitionTiming.cleanupDelayNanoseconds
+                )
             } catch {
                 return
             }
@@ -514,6 +618,8 @@ struct DashboardView: View {
             guard !Task.isCancelled else { return }
             outgoingRange = nil
             outgoingRevealProgress = 0
+            outgoingTransitionStartProgress = 0
+            rangeTransitionStartedAt = nil
         }
         .accessibilityIdentifier("screen.dashboard")
     }
@@ -744,14 +850,31 @@ struct DashboardView: View {
 
     private func selectRange(_ range: EarningsRange) {
         if range != selectedRange {
-            let outgoingStartProgress = incomingRevealProgress
+            let transitionDate = Date()
+            let previousRange = selectedRange
+            let presentation = rangeTransitionPresentation(at: transitionDate)
+            let outgoingProgress = presentation?.outgoing ?? 0
+            let incomingProgress = presentation?.incoming ?? 1
 
             selectedPoint = nil
             displayedPoint = nil
-            outgoingRange = selectedRange
-            outgoingRevealProgress = outgoingStartProgress
+
+            if
+                let currentOutgoingRange = outgoingRange,
+                outgoingProgress > incomingProgress
+            {
+                outgoingRange = currentOutgoingRange
+                outgoingRevealProgress = outgoingProgress
+                outgoingTransitionStartProgress = outgoingProgress
+            } else {
+                outgoingRange = previousRange
+                outgoingRevealProgress = incomingProgress
+                outgoingTransitionStartProgress = incomingProgress
+            }
+
             incomingRevealProgress = 0
             selectedRange = range
+            rangeTransitionStartedAt = transitionDate
             rangeTransitionCycle += 1
         }
 

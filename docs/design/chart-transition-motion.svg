@@ -48,24 +48,24 @@
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
       <path d="M25 145 C75 112,105 157,150 112" fill="none" stroke="#8259bd" stroke-width="4"/>
       <path d="M25 150 C55 130,70 128,88 118" fill="none" stroke="#9b5cff" stroke-width="5"/>
-      <text x="139" y="188" text-anchor="middle" class="b">80 ms · 旧退 / 新进</text>
+      <text x="139" y="188" text-anchor="middle" class="b">360 ms · 旧退 / 新进</text>
     </g>
     <g transform="translate(636 0)">
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
       <path d="M25 145 C60 118,82 135,105 128" fill="none" stroke="#8259bd" stroke-width="4"/>
       <path d="M25 150 C65 126,96 142,135 105 S190 92,210 80" fill="none" stroke="#9b5cff" stroke-width="5"/>
-      <text x="139" y="188" text-anchor="middle" class="b">160 ms · 新线占主导</text>
+      <text x="139" y="188" text-anchor="middle" class="b">850 ms · 新线占主导</text>
     </g>
     <g transform="translate(954 0)">
       <rect width="278" height="205" rx="22" fill="#171816" stroke="#3e3f3c"/>
       <path d="M25 150 C65 126,96 142,135 105 S190 92,253 65" fill="none" stroke="#9b5cff" stroke-width="5"/>
-      <text x="139" y="188" text-anchor="middle" class="b">240 ms · 新线完整</text>
+      <text x="139" y="188" text-anchor="middle" class="b">1.43 s · 新线完整</text>
     </g>
   </g>
-  <text x="105" y="1030" class="s" fill="#a989d6">旧线：从右端往左擦除</text>
+  <text x="105" y="1030" class="s" fill="#a989d6">旧线：约 0.85 s 从右端往左擦除</text>
   <text x="500" y="1030" class="s">＋</text>
-  <text x="545" y="1030" class="s" fill="#c19aff">新线：从左端往右绘制</text>
-  <text x="1020" y="1030" class="s">总时长约 220–260 ms</text>
+  <text x="545" y="1030" class="s" fill="#c19aff">新线：延后 0.18 s，约 1.25 s 绘完</text>
+  <text x="1050" y="1030" class="s">总时长约 1.43 s</text>
   <text x="105" y="1080" class="b">连续滑过多个周期时，新选择直接打断上一个切换，不排队。</text>
 
   <rect x="55" y="1165" width="1330" height="390" rx="32" fill="#1d1e1c"/>
