@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780">
+  <defs>
+    <filter id="glow" x="-50%" y="-200%" width="200%" height="500%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity=".035"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="780" rx="28" fill="#191918"/>
+  <text x="56" y="72" fill="#ffffff" font-size="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">时间范围选择器：Underline + Spring / Stretch</text>
+  <text x="56" y="112" fill="#9f9fa6" font-size="21" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">保留紫色，只把当前整块紫色选中背景改成底部滑动横条；横条移动时拉伸，到位后轻微回弹。</text>
+
+  <rect x="56" y="154" width="1088" height="180" rx="30" fill="url(#glass)" stroke="#ffffff" stroke-opacity=".08"/>
+  <text x="90" y="198" fill="#b46cff" font-size="20" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">最终静态样式</text>
+  <rect x="140" y="226" width="920" height="72" rx="26" fill="#ffffff" fill-opacity=".045" stroke="#ffffff" stroke-opacity=".10"/>
+  <text x="245" y="267" text-anchor="middle" fill="#96969d" font-size="22" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">24H</text>
+  <text x="485" y="267" text-anchor="middle" fill="#b46cff" font-size="22" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+  <text x="725" y="267" text-anchor="middle" fill="#96969d" font-size="22" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">30D</text>
+  <text x="965" y="267" text-anchor="middle" fill="#96969d" font-size="22" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="600">1Y</text>
+  <rect x="452" y="286" width="66" height="4" rx="2" fill="#b46cff" filter="url(#glow)"/>
+
+  <text x="56" y="390" fill="#ffffff" font-size="25" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">24H → 7D 动画帧</text>
+
+  <g transform="translate(56 425)">
+    <rect width="190" height="112" rx="20" fill="#222221" stroke="#ffffff" stroke-opacity=".08"/>
+    <text x="18" y="25" fill="#8f8f96" font-size="15" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">① 起始</text>
+    <text x="35" y="66" fill="#b46cff" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">24H</text>
+    <text x="121" y="66" fill="#8f8f96" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">7D</text>
+    <rect x="28" y="84" width="52" height="4" rx="2" fill="#b46cff" filter="url(#glow)"/>
+  </g>
+
+  <g transform="translate(274 425)">
+    <rect width="190" height="112" rx="20" fill="#222221" stroke="#ffffff" stroke-opacity=".08"/>
+    <text x="18" y="25" fill="#8f8f96" font-size="15" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">② 拉伸</text>
+    <text x="35" y="66" fill="#b46cff" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">24H</text>
+    <text x="121" y="66" fill="#8f8f96" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">7D</text>
+    <rect x="34" y="84" width="82" height="4" rx="2" fill="#b46cff" filter="url(#glow)"/>
+  </g>
+
+  <g transform="translate(492 425)">
+    <rect width="190" height="112" rx="20" fill="#222221" stroke="#ffffff" stroke-opacity=".08"/>
+    <text x="18" y="25" fill="#8f8f96" font-size="15" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">③ 滑行</text>
+    <text x="35" y="66" fill="#a5a5ac" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="121" y="66" fill="#b46cff" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+    <rect x="63" y="84" width="92" height="4" rx="2" fill="#b46cff" filter="url(#glow)"/>
+  </g>
+
+  <g transform="translate(710 425)">
+    <rect width="190" height="112" rx="20" fill="#222221" stroke="#ffffff" stroke-opacity=".08"/>
+    <text x="18" y="25" fill="#8f8f96" font-size="15" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">④ 越过一点</text>
+    <text x="35" y="66" fill="#8f8f96" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="121" y="66" fill="#b46cff" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+    <rect x="103" y="84" width="60" height="4" rx="2" fill="#b46cff" filter="url(#glow)"/>
+  </g>
+
+  <g transform="translate(928 425)">
+    <rect width="216" height="112" rx="20" fill="#222221" stroke="#b46cff" stroke-opacity=".38"/>
+    <text x="18" y="25" fill="#b46cff" font-size="15" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">⑤ 回弹稳定</text>
+    <text x="45" y="66" fill="#8f8f96" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">24H</text>
+    <text x="145" y="66" fill="#b46cff" font-size="16" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">7D</text>
+    <rect x="119" y="84" width="52" height="4" rx="2" fill="#b46cff" filter="url(#glow)"/>
+  </g>
+
+  <rect x="56" y="574" width="1088" height="150" rx="24" fill="#241a2d" stroke="#b46cff" stroke-opacity=".18"/>
+  <text x="84" y="615" fill="#d8b7ff" font-size="21" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-weight="700">视觉规格建议</text>
+  <text x="84" y="650" fill="#b7b7bd" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">• underline：宽 28–34 pt，高 3 pt，Capsule；紫色沿用 Color.accentColor，可带非常轻的 glow。</text>
+  <text x="84" y="682" fill="#b7b7bd" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">• active 文本保持紫色；inactive 使用 secondary。外层玻璃容器保持低对比，不再给选中项整块填充。</text>
+  <text x="84" y="714" fill="#b7b7bd" font-size="18" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">• Spring + Stretch：横向拉伸 1.16–1.42×（随跨越距离），160ms 后收回，使用现有 spring 参数即可。</text>
+</svg>
