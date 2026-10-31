@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 每小时检查一次签名到期并在需要时续签。
+     用已获得桌面目录访问权限的 Homebrew python3 拉起 zsh（直接用 /bin/zsh 会被隐私权限拦住读不到仓库）。安装：
+     sed "s|__REPO__|$PWD|" scripts/me.0xpsyche.aven-renew.plist > ~/Library/LaunchAgents/me.0xpsyche.aven-renew.plist
+     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/me.0xpsyche.aven-renew.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>me.0xpsyche.aven-renew</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3</string>
+    <string>-c</string>
+    <string>import subprocess, sys; sys.exit(subprocess.call(["/bin/zsh", "__REPO__/scripts/renew.sh"]))</string>
+  </array>
+  <key>StartInterval</key><integer>3600</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/aven-renew.log</string>
+  <key>StandardErrorPath</key><string>/tmp/aven-renew.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+  </dict>
+</dict>
+</plist>
