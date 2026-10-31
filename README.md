@@ -13,6 +13,7 @@ Aven 是一个使用 SwiftUI 构建的个人被动收入看板：把多个量化
 - **推送跳转**：Bark 通知点开经 `aven://source/<id>` 直接进入对应来源页
 - **主币种**：美元或人民币，人民币按服务端实时汇率换算
 - 前台每 30 秒自动刷新，冷启动先显示磁盘缓存
+- **小组件**：主屏（小、中）显示今日和近 7 天收益、今日贡献最大的来源；锁屏（矩形、单行）显示今日收益，约 20 分钟刷新一次
 
 ## 技术栈
 
@@ -48,15 +49,30 @@ App 读取以下只读接口（`Authorization: Bearer <令牌>`）：
    scripts/install.sh
    ```
 
-   脚本会自动选中有线连接的真机，构建时把令牌注入 Info.plist（令牌不进仓库），并覆盖安装。也可以不注入令牌，装好后在 App 的 Settings 里填写。
+   脚本会自动选中有线连接的真机，构建时把令牌注入 App 和小组件的 Info.plist（令牌不进仓库），并覆盖安装。也可以不注入令牌，装好后在 App 的 Settings 里填写（小组件只认构建时注入的令牌）。
+
+4. （可选）免费开发者账号约 7 天到期，装上自动续签的 launchd 任务：
+
+   ```sh
+   sed "s|__REPO__|$PWD|" scripts/me.0xpsyche.aven-renew.plist > ~/Library/LaunchAgents/me.0xpsyche.aven-renew.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/me.0xpsyche.aven-renew.plist
+   ```
+
+   每小时检查一次，剩不到 48 小时且 iPhone 连着这台 Mac（有线或同一局域网）时重新签名安装；剩不到 24 小时还没装上，每天推一条 Bark 提醒。
 
 ## 项目结构
 
 ```text
 Aven/
 ├── Aven.xcodeproj/
-├── Config/Info.plist        # URL Scheme 与构建时注入的令牌占位
-├── scripts/install.sh       # 真机构建与安装
+├── Config/
+│   ├── Info.plist           # URL Scheme 与构建时注入的令牌占位
+│   └── Widget-Info.plist    # 小组件扩展声明与令牌占位
+├── scripts/
+│   ├── install.sh           # 真机构建与安装
+│   ├── renew.sh             # 签名到期前自动续签
+│   └── me.0xpsyche.aven-renew.plist  # 续签的 launchd 模板
+├── AvenWidget/AvenWidget.swift  # 主屏与锁屏小组件
 └── Aven/
     ├── AvenApp.swift        # 入口
     ├── ContentView.swift    # 底栏、导航与 aven:// 跳转
@@ -72,5 +88,5 @@ Aven/
 ## 当前边界
 
 - 只读展示，不录入收入、不下单、不改服务端数据。
-- 使用免费开发者账号签名时，安装包约 7 天后需要重新签名安装。
+- 使用免费开发者账号签名时，安装包约 7 天后需要重新签名安装（可用上面的 launchd 任务自动续签）。
 - 推送依赖 Bark App；App 本身不申请推送权限。
