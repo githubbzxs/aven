@@ -12,6 +12,7 @@
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					A00000000000000000000002 = { CreatedOnToolsVersion = 27.0; };
+					A00000000000000000000016 = { CreatedOnToolsVersion = 27.0; };
 				};
 			};
 			buildConfigurationList = A00000000000000000000010;
@@ -23,14 +24,14 @@
 			productRefGroup = A00000000000000000000004;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (A00000000000000000000002);
+			targets = (A00000000000000000000002, A00000000000000000000016);
 		};
 		A00000000000000000000002 = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A00000000000000000000011;
-			buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009);
+			buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009, A0000000000000000000001F);
 			buildRules = ();
-			dependencies = ();
+			dependencies = (A00000000000000000000021);
 			fileSystemSynchronizedGroups = (A00000000000000000000005);
 			name = Aven;
 			packageProductDependencies = ();
@@ -40,12 +41,12 @@
 		};
 		A00000000000000000000003 = {
 			isa = PBXGroup;
-			children = (A00000000000000000000005, A00000000000000000000004);
+			children = (A00000000000000000000005, A0000000000000000000001B, A00000000000000000000004);
 			sourceTree = "<group>";
 		};
 		A00000000000000000000004 = {
 			isa = PBXGroup;
-			children = (A00000000000000000000006);
+			children = (A00000000000000000000006, A0000000000000000000001C);
 			name = Products;
 			sourceTree = "<group>";
 		};
@@ -185,6 +186,127 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
+		};
+		A00000000000000000000016 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0000000000000000000001A;
+			buildPhases = (A00000000000000000000017, A00000000000000000000018, A00000000000000000000019);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (A0000000000000000000001B);
+			name = AvenWidget;
+			packageProductDependencies = ();
+			productName = AvenWidget;
+			productReference = A0000000000000000000001C;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A00000000000000000000017 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000018 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000019 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0000000000000000000001A = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A0000000000000000000001D, A0000000000000000000001E);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A0000000000000000000001B = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AvenWidget;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000001C = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = AvenWidget.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		A0000000000000000000001D = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AVEN_API_TOKEN = "";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72L8HG65Z4;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Widget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Aven;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.0xpsyche.aven.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A0000000000000000000001E = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AVEN_API_TOKEN = "";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72L8HG65Z4;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Widget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Aven;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks");
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.0xpsyche.aven.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		A0000000000000000000001F = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (A00000000000000000000020);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000020 = {
+			isa = PBXBuildFile;
+			fileRef = A0000000000000000000001C;
+			settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); };
+		};
+		A00000000000000000000021 = {
+			isa = PBXTargetDependency;
+			target = A00000000000000000000016;
+			targetProxy = A00000000000000000000022;
+		};
+		A00000000000000000000022 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000016;
+			remoteInfo = AvenWidget;
 		};
 	};
 	rootObject = A00000000000000000000001;
